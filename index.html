@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filament Takip</title>
+<style>
+:root{--bg:#f6f5f2;--card:#fff;--ink:#1d1c1a;--mut:#6f6b64;--line:#e4e1db;--acc:#e8590c;--ok:#2f9e44;--warn:#e67700;--bad:#c92a2a;--chip:#f1efea}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1e1d1b;--ink:#ecebe8;--mut:#9c978f;--line:#2f2d2a;--chip:#2a2926}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;font-weight:650}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mut);display:inline-block}
+.dot.on{background:var(--ok)}.dot.err{background:var(--bad)}
+nav{margin-left:auto;display:flex;gap:4px}
+nav button{background:none;border:0;padding:7px 12px;border-radius:8px;color:var(--mut);font:inherit;cursor:pointer}
+nav button.act{background:var(--chip);color:var(--ink);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+.card h2{font-size:14px;margin:0 0 12px;font-weight:650;display:flex;align-items:center;gap:8px}
+.mut{color:var(--mut)}.small{font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.slot{border:1px solid var(--line);border-radius:12px;padding:12px;position:relative}
+.card.ace{border-top:3px solid var(--acc)}
+.card.shelf{border-top:3px solid var(--mut)}
+.slot{background:color-mix(in srgb,var(--acc) 5%,var(--card))}
+.slot.loaded{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);flex:none}
+.row{display:flex;align-items:center;gap:10px}
+.bar{height:8px;background:var(--chip);border-radius:6px;overflow:hidden;margin:8px 0 4px}
+.bar>i{display:block;height:100%;background:var(--ok);border-radius:6px}
+.bar.warn>i{background:var(--warn)}.bar.bad>i{background:var(--bad)}
+.spool{border:1px solid var(--line);border-radius:12px;padding:12px}
+.big{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+button.b,select,input,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button.b{cursor:pointer}button.b:hover{border-color:var(--mut)}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+button.mini{padding:3px 8px;font-size:12px}
+select{max-width:100%}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;background:var(--chip);color:var(--mut)}
+.tag.acc{background:var(--acc);color:#fff}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}th{color:var(--mut);font-weight:500;font-size:12px}
+.prog{height:10px;background:var(--chip);border-radius:6px;overflow:hidden}.prog>i{display:block;height:100%;background:var(--acc)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--chip);border-radius:12px;padding:12px}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:18px;width:min(420px,92vw)}
+dialog::backdrop{background:#0006}
+form.f{display:grid;gap:10px}form.f label{display:grid;gap:4px;font-size:12px;color:var(--mut)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.err{color:var(--bad)}.hide{display:none!important}
+code{background:var(--chip);padding:1px 5px;border-radius:5px;font-size:12px}
+ol li{margin:4px 0}
+.mhead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.mhead h3{margin:0;font-size:15px}
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0}
+.chips button{padding:8px 0;font-variant-numeric:tabular-nums}
+.chips .neg{color:var(--bad)}.chips .pos{color:var(--ok)}
+.preview{display:flex;justify-content:space-between;align-items:baseline;background:var(--chip);border-radius:10px;padding:10px 12px;margin:10px 0}
+.preview .big{font-size:24px}
+.delta{font-weight:600;font-variant-numeric:tabular-nums}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;flex-wrap:wrap}
+button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+dialog[open]{animation:pop .14s ease-out}@keyframes pop{from{transform:scale(.96);opacity:0}}
+.olist{display:grid;gap:10px}
+.oc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px}
+.oc .top{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.oc .ttl{font-weight:650}
+.money{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+.money b{color:var(--ink)}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.st{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.st-liste{background:#f3d9fa;color:#862e9c}.st-bekliyor,.st-siparis{background:#fff3bf;color:#7a5b00}.st-basiliyor,.st-kargoda{background:#d0ebff;color:#1c5d99}
+.st-hazir{background:#d3f9d8;color:#1f6b2c}.st-teslim{background:var(--chip);color:var(--mut)}.st-iptal{background:#ffe3e3;color:#a61e1e}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:20px;padding:4px 12px;font:inherit;font-size:12px;cursor:pointer}
+.filters button.act{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.mform{display:grid;gap:10px}.mform label{display:grid;gap:4px;font-size:12px;color:var(--mut)}
+.mform .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.prow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.prow:first-of-type{border-top:0}
+.warnc{color:var(--warn)}
+.imp{border:1px dashed var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:6px}
+.implist{display:grid;gap:4px}.implist:empty,.impmsg:empty{display:none}
+dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
+.frow{display:grid;grid-template-columns:1fr 110px 1fr 28px;gap:6px;align-items:center}
+.ptab td,.ptab th{padding:6px 8px}
+.irow{display:grid;grid-template-columns:1.1fr .8fr 1fr 40px .8fr .55fr .9fr 28px;gap:6px;align-items:center}
+.irow input{min-width:0;padding:5px 6px}
+#mdlg.wide{width:min(760px,96vw)}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.modes label{border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;display:grid;gap:2px}
+.modes label:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.modes input{display:none}
+.warnbox{background:#fff4e6;color:#8a4b00;border-radius:10px;padding:10px 12px;font-size:12px}
+@media (prefers-color-scheme:dark){.warnbox{background:#3a2a14;color:#ffd8a8}.st-liste{background:#3d1f47;color:#eebefa}.st-bekliyor,.st-siparis{background:#4a3c00;color:#ffe066}.st-basiliyor,.st-kargoda{background:#14334f;color:#a5d8ff}.st-hazir{background:#173d20;color:#b2f2bb}.st-iptal{background:#4a1515;color:#ffc9c9}}
+@media (max-width:700px){.frow{grid-template-columns:1fr 90px 28px}.frow .fc{grid-column:1/-1}.irow{grid-template-columns:1fr 1fr;}.modes{grid-template-columns:1fr}.mform .three{grid-template-columns:1fr 1fr}}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+@media (max-width:600px){header{flex-wrap:wrap}nav{margin-left:0;width:100%;overflow-x:auto}}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span><h1>Filament Takip</h1>
+  <span class="mut small" id="hdr"></span>
+  <nav>
+    <button data-t="pano" class="act">Pano</button>
+    <button data-t="stok">Makaralar</button>
+    <button data-t="sip">Siparişler</button>
+    <button data-t="urun">Ürünler</button>
+    <button data-t="alim">Alımlar</button>
+    <button data-t="gecmis">Geçmiş</button>
+    <button data-t="ayar">Ayarlar</button>
+  </nav>
+</header>
+<main>
+  <!-- PANO -->
+  <section id="t-pano">
+    <div class="row" style="flex-wrap:wrap;margin-bottom:16px">
+      <button class="b p" onclick="editSpool()">+ Makara ekle</button>
+      <button class="b p" onclick="logPrint()">✓ Baskı kaydet (gram düş)</button>
+      <button class="b" onclick="editOrder()">+ Sipariş</button>
+      <span class="mut small" id="nocloud" style="margin-left:auto">Elle mod · giriş gerekmez · <a href="#" onclick="tab('ayar');return false">Yazıcıyı bağla (isteğe bağlı)</a></span>
+    </div>
+    <div class="card hide" id="welcome">
+      <h2>Hoş geldin 👋</h2>
+      <ol class="mut" style="margin:0;padding-left:18px">
+        <li><b style="color:var(--ink)">+ Makara ekle</b> ile elindeki makaraları gir (marka, renk, kaç gram).</li>
+        <li>İstersen aşağıdaki ACE slotlarına hangi makaranın takılı olduğunu seç.</li>
+        <li>Bir baskı bitince <b style="color:var(--ink)">✓ Baskı kaydet</b>'e bas, Slicer'ın gösterdiği gramı yaz; makaradan düşülür.</li>
+      </ol>
+      <p class="mut small" style="margin-bottom:0">Anycubic hesabını bağlamak tamamen isteğe bağlı; bağlarsan 3. adım otomatik olur.</p>
+    </div>
+    <div class="card hide" id="cloudErr"></div>
+    <div class="stats" id="stats" style="margin-bottom:16px"></div>
+    <div class="card hide" id="printCard"></div>
+    <div class="card ace" id="slotCard"><h2>🎛️ ACE Pro slotları <span class="mut small" id="slotUpd"></span></h2><div class="slots" id="slots"></div>
+      <p class="mut small" style="margin:10px 0 0" id="slotHelp"></p></div>
+    <div class="card shelf"><h2>📦 Raftaki makaralar <span class="tag" id="shelfN"></span></h2><div class="grid" id="panoSpools"></div></div>
+    <div class="card"><h2>Yaklaşan siparişler <span class="mut small" style="margin-left:auto;font-weight:400"><a href="#" onclick="tab('sip');return false">tümü →</a></span></h2><div id="panoOrders" class="olist"></div></div>
+    <div class="card hide" id="panoPlanCard"><h2>🧮 Sipariş planı <span class="mut small" style="font-weight:400">açık siparişlerden sonra ne kalacak</span></h2><div id="panoPlan"></div></div>
+    <div class="card"><h2>Azalanlar</h2><div id="low" class="mut">—</div></div>
+  </section>
+
+  <!-- SİPARİŞLER -->
+  <section id="t-sip" class="hide">
+    <div class="stats" id="ostats" style="margin-bottom:16px"></div>
+    <div class="card"><h2>🧮 Sipariş planı <span class="mut small" style="font-weight:400">açık siparişler için ayrılan filament</span></h2><div id="sipPlan"></div></div>
+    <div class="row" style="margin-bottom:12px;flex-wrap:wrap"><div class="filters" id="ofilt" style="margin:0"></div><input id="oq" placeholder="Ara (müşteri, ürün)…" style="flex:1;min-width:160px"><button class="b p" onclick="editOrder()">+ Yeni sipariş</button></div>
+    <div class="olist" id="orders"></div>
+  </section>
+
+  <!-- ÜRÜNLER -->
+  <section id="t-urun" class="hide">
+    <div class="row" style="margin-bottom:12px"><input id="uq" placeholder="Ara (ürün)…" style="flex:1" oninput="renderProducts()"><button class="b p" onclick="editProduct()">+ Yeni ürün</button></div>
+    <div class="olist" id="products"></div>
+  </section>
+
+  <!-- ALIMLAR -->
+  <section id="t-alim" class="hide">
+    <div class="stats" id="pstats" style="margin-bottom:16px"></div>
+    <div class="row" style="margin-bottom:12px"><span class="mut small" style="flex:1">Filament siparişlerin. “Teslim alındı” deyince makaralar fiyatıyla (kargo payı dahil) otomatik stoğa eklenir.</span><button class="b p" onclick="editPurchase()">+ Yeni alım</button></div>
+    <div class="olist" id="purchases"></div>
+  </section>
+
+  <!-- STOK -->
+  <section id="t-stok" class="hide">
+    <div class="row" style="margin-bottom:12px"><input id="q" placeholder="Ara (marka, renk, malzeme)…" style="flex:1"><button class="b p" onclick="editSpool()">+ Makara ekle</button></div>
+    <div class="card ace"><h2>🎛️ ACE Pro'da takılı</h2><div class="slots" id="slots2"></div></div>
+    <div class="card shelf"><h2>📦 Rafta <span class="tag" id="shelfN2"></span></h2><div class="grid" id="spools"></div></div>
+    <div class="card"><h2>💰 Renk / malzeme fiyatları</h2><div id="ptab"></div>
+      <p class="mut small">Siparişte bir renk seçince maliyet o rengin ₺/g fiyatıyla hesaplanır. Fiyatı olmayan makaralar için önce aynı renk, sonra aynı malzeme ortalaması, o da yoksa Ayarlar'daki varsayılan ₺/kg kullanılır.</p></div>
+  </section>
+
+  <!-- GEÇMİŞ -->
+  <section id="t-gecmis" class="hide">
+    <div class="card"><h2>Baskı geçmişi</h2><div id="hist"></div></div>
+    <div class="card"><h2>Olay günlüğü</h2><div id="log" class="small"></div></div>
+  </section>
+
+  <!-- AYARLAR -->
+  <section id="t-ayar" class="hide">
+    <div class="card">
+      <h2>Yazıcı bağlantısı</h2>
+      <div class="modes" id="modes">
+        <label><input type="radio" name="mode" value="manual"><b>✍️ Elle</b><span class="mut small">Bağlantı yok, baskıları sen kaydedersin</span></label>
+        <label><input type="radio" name="mode" value="cloud"><b>☁️ Anycubic Cloud</b><span class="mut small">Hesapla bağlan; uygulama/bulut çalışmaya devam eder</span></label>
+        <label><input type="radio" name="mode" value="lan"><b>📡 Yerel ağ (IP)</b><span class="mut small">Kobra S1'e doğrudan bağlan, internet gerekmez</span></label>
+      </div>
+    </div>
+    <div class="card hide" id="lanCard">
+      <h2>📡 Yerel ağ (IP) bağlantısı <span id="lanState" class="tag"></span></h2>
+      <div class="warnbox">⚠️ Bunun için yazıcı ekranında <b>Ayarlar → Ağ → LAN Modu</b>'nu açman gerekiyor. LAN Modu açıkken yazıcı Anycubic hesabından çıkar: telefon uygulaması ve buluttan baskı gönderme çalışmaz (Slicer'dan yerel ağ ile göndermeye devam edebilirsin). Kapatıp yazıcıyı uygulamadan tekrar eklersen eski haline döner.</div>
+      <div class="row" style="margin-top:12px;flex-wrap:wrap"><input id="lanip" placeholder="Yazıcının IP adresi (ör. 192.168.1.42)" style="flex:1;min-width:200px"><button class="b" onclick="lanTest()">Test et</button><button class="b p" onclick="lanSave()">Bağlan</button></div>
+      <p class="mut small">IP adresini yazıcı ekranında <b>Ayarlar → Ağ</b> bölümünde ya da modeminin bağlı cihazlar listesinde bulabilirsin.</p>
+      <div id="lanMsg" class="small"></div>
+    </div>
+    <div class="card hide" id="cloudCard">
+      <h2>☁️ Anycubic Cloud bağlantısı <span id="tokState" class="tag"></span></h2>
+      <ol class="mut">
+        <li>Chrome / Brave / Edge / Arc'ta <a href="https://cloud-universe.anycubic.com/file" target="_blank">cloud-universe.anycubic.com</a> adresine git ve Anycubic hesabınla giriş yap.</li>
+        <li>Buraya dönüp <b>Tarayıcıdan otomatik bul</b>'a bas. (Safari kullanıyorsan aşağıdaki elle yöntemi kullan.)</li>
+      </ol>
+      <div class="row" style="flex-wrap:wrap"><button class="b p" onclick="detect()">Tarayıcıdan otomatik bul</button><span class="mut small">ya da elle yapıştır:</span></div>
+      <div class="row" style="margin-top:10px"><input id="tok" placeholder="XX-Token (eyJ… ile başlar)" style="flex:1"><button class="b" onclick="saveTok()">Kaydet</button></div>
+      <p class="mut small">Elle almak için: Anycubic sitesinde giriş yaptıktan sonra Geliştirici Araçları → Console'a <code>copy(localStorage['XX-Token'])</code> yaz, Enter'a bas, buraya yapıştır. Token yaklaşık 90 gün geçerlidir. Sadece bu bilgisayarda saklanır.</p>
+      <div class="row hide" id="prSel" style="margin-top:8px"><span class="mut">Yazıcı:</span><select id="printer" onchange="post('/api/printer',{id:+this.value})"></select></div>
+      <div class="row" style="margin-top:8px"><button class="b mini" onclick="post('/api/token',{token:''})">Bağlantıyı kaldır</button> <a class="small" href="/api/raw" target="_blank">ham veri</a></div>
+    </div>
+    <div class="card">
+      <h2>Maliyet ayarları</h2>
+      <form class="mform" onsubmit="return false" id="costf">
+        <div class="two"><label>Elektrik birim fiyatı (₺/kWh)<input type="number" step="0.01" name="kwh_price"></label>
+        <label>Yazıcı ortalama güç (W)<input type="number" step="1" name="printer_watt"></label></div>
+        <div class="two"><label>İşçilik (₺/saat, elle çalışma)<input type="number" step="1" name="labor_hour"></label>
+        <label>Varsayılan kâr marjı (%)<input type="number" step="1" name="margin"></label></div>
+        <div class="two"><label>Fiyatı bilinmeyen filament (₺/kg)<input type="number" step="1" name="default_kg" placeholder="ör. 600"></label><span></span></div>
+      </form>
+      <p class="mut small">Kobra S1 baskı sırasında ortalama ~150 W çeker (tabla ısınırken daha fazla). Sipariş maliyeti = filament (makaranın ₺/g fiyatı) + elektrik (baskı süresi × W × kWh) + işçilik (senin harcadığın süre × ₺/saat) + ek masraflar.</p>
+    </div>
+    <div class="card">
+      <h2>Tercihler</h2>
+      <form class="f" onsubmit="return false">
+        <label>Az kaldı uyarı eşiği (g)<input type="number" id="lowg" min="0" step="10" onchange="post('/api/settings',{low_g:+this.value})"></label>
+        <label style="display:flex;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="autod" onchange="post('/api/settings',{auto_deduct:this.checked})"> Baskı sırasında makaradan otomatik düş</label>
+        <label style="display:flex;align-items:center;gap:8px;color:var(--ink)"><input type="checkbox" id="ordd" onchange="post('/api/settings',{order_deduct:this.checked})"> Sipariş “Basılıyor” olunca tahmini gramı stoktan düş</label>
+        <p class="mut small" style="margin:0">Gerçek baskı (otomatik ya da “Baskı ekle”) siparişe bağlanınca tahmin geri verilir, çift düşülmez. “Bekliyor” / “İptal”e çekersen kalan tahmin iade edilir.</p>
+      </form>
+      <p class="mut small">Not: Anycubic kalan filament miktarını bildirmiyor; uygulama makaranın başlangıç ağırlığından, baskıda tüketilen filament uzunluğunu (yoğunluk × 1.75 mm kesit) çıkararak hesaplar. Ara sıra makarayı tartıp düzeltmek en doğrusu.</p>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><form class="f" id="sf" method="dialog">
+  <h2 style="margin:0 0 4px;font-size:15px" id="dlgT">Makara</h2>
+  <input type="hidden" name="id">
+  <div class="two"><label>Marka<input name="brand" placeholder="Anycubic"></label>
+  <label>Malzeme<input name="material" list="mats" value="PLA"></label></div>
+  <div class="two"><label>Renk adı<input name="name" placeholder="Siyah"></label>
+  <label>Renk<input type="color" name="color" value="#222222" style="height:34px;padding:2px"></label></div>
+  <div class="two"><label>Net ağırlık (g)<input type="number" name="total_g" value="1000" step="1"></label>
+  <label>Kalan (g)<input type="number" name="remaining_g" step="1" placeholder="= net"></label></div>
+  <div class="two"><label>Fiyat (₺)<input type="number" name="price" step="0.01"></label><label>Not<input name="notes"></label></div>
+  <div class="row" style="justify-content:space-between;margin-top:4px">
+    <button type="button" class="b" id="delBtn" style="color:var(--bad)">Sil</button>
+    <div class="row"><button class="b" value="cancel" formnovalidate>Vazgeç</button><button class="b p" value="ok" id="okBtn">Kaydet</button></div>
+  </div>
+</form></dialog>
+<dialog id="pdlg"><form class="f" id="pf" method="dialog">
+  <h2 style="margin:0 0 4px;font-size:15px">Baskı kaydet</h2>
+  <p class="mut small" style="margin:0">Slicer'da dilimledikten sonra gösterilen gram değerini (ya da yazıcı ekranındaki tüketimi) yaz. Çok renkli baskıda her makara için ayrı satır ekle.</p>
+  <label>Ne bastın? (isteğe bağlı)<input name="file" placeholder="ör. benchy"></label>
+  <div class="two"><label>Sipariş (isteğe bağlı)<select name="order_id" id="porder"></select></label>
+  <label>Baskı süresi (saat)<input name="hours" type="number" step="0.1" min="0" placeholder="ör. 3.5"></label></div>
+  <div id="pitems" style="display:grid;gap:8px"></div>
+  <button type="button" class="b mini" onclick="addItem()" style="justify-self:start">+ Başka makara</button>
+  <div class="row" style="justify-content:flex-end;margin-top:4px"><button class="b" value="cancel" formnovalidate>Vazgeç</button><button class="b p" value="ok">Kaydet ve düş</button></div>
+</form></dialog>
+<dialog id="mdlg"><div id="mbody"></div><div class="mfoot" id="mfoot"></div></dialog>
+<datalist id="mats"><option>PLA</option><option>PLA+</option><option>PETG</option><option>ABS</option><option>ASA</option><option>TPU</option><option>PA</option><option>PC</option></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+let S = null, cur = 'pano';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const g = n => (Math.round(n * 10) / 10).toLocaleString('tr-TR') + ' g';
+const ago = t => { const s = (Date.now()/1000 - t) | 0; return s < 60 ? s + ' sn önce' : s < 3600 ? ((s/60)|0) + ' dk önce' : new Date(t*1000).toLocaleString('tr-TR'); };
+const dt = t => new Date(t*1000).toLocaleString('tr-TR', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'), m.length>40?5000:2600); }
+
+async function post(url, body){
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json','X-Filament':'1'}, body:JSON.stringify(body||{})});
+  const j = await r.json();
+  if (!r.ok) { toast(j.error || 'Hata'); throw new Error(j.error); }
+  await load(); return j;
+}
+async function load(){ S = await (await fetch('/api/state')).json(); render(); }
+
+function tab(t){ cur=t; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('act', b.dataset.t===t));
+  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide', s.id!=='t-'+t)); }
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+
+function pct(sp){ return sp.total_g ? Math.max(0, Math.min(100, sp.remaining_g / sp.total_g * 100)) : 0; }
+function barCls(sp){ return sp.remaining_g <= S.settings.low_g * .5 ? 'bad' : sp.remaining_g <= S.settings.low_g ? 'warn' : ''; }
+function label(sp){ return [sp.brand, sp.material, sp.name].filter(Boolean).join(' · ') || 'Makara'; }
+function ordered(list){ return [...list].sort((a,b)=>(a.created||0)-(b.created||0)); }
+function shelf(){ return ordered(S.spools.filter(s=>!slotOf(s.id))); }
+function slotOf(id){ return Object.entries(S.slot_map).find(([k,v])=>v===id)?.[0]; }
+
+function render(){
+  PLAN = stockPlan();
+  const mode = S.settings.mode || 'manual', L = mode === 'manual' ? null : S.live;
+  const err = mode === 'cloud' ? S.cloud_error : mode === 'lan' && !S.lan_status?.connected ? S.lan_status?.error : null;
+  const linked = mode === 'cloud' ? S.has_token : mode === 'lan' ? !!S.lan_status?.connected : false;
+  $('#dot').className = 'dot ' + (mode === 'manual' ? '' : err ? 'err' : linked ? 'on' : '');
+  $('#hdr').textContent = L ? `${L.name || 'Yazıcı'} · ${L.printing ? 'basıyor' : 'boşta'}${mode==='lan'?' · yerel ağ':''}` : mode === 'manual' ? 'elle mod' : 'bağlanıyor…';
+  $('#nocloud').classList.toggle('hide', mode !== 'manual');
+  $('#welcome').classList.toggle('hide', S.spools.length > 0);
+  $('#cloudErr').classList.toggle('hide', !err);
+  if (err) $('#cloudErr').innerHTML = `<h2 class="err">${mode==='lan'?'Yazıcıya yerel ağdan bağlanılamıyor':'Anycubic bağlantı sorunu'}</h2><div class="mut">${esc(err)}${mode==='cloud'&&/token|401|403|login|expire|Illegal/i.test(err)?' — token süresi dolmuş olabilir, Ayarlar\'dan yenile.':''}${mode==='lan'?' — yazıcı açık mı, LAN Modu açık mı, IP doğru mu? 20 sn\'de bir tekrar deneniyor.':''}</div>`;
+
+  // istatistik
+  const tot = S.spools.reduce((a,s)=>a+(s.remaining_g||0),0);
+  const val = S.spools.reduce((a,s)=>a+(s.price&&s.total_g? s.price*s.remaining_g/s.total_g:0),0);
+  const d30 = S.history.filter(h=>h.ts > Date.now()/1000-30*86400).reduce((a,h)=>a+h.grams,0);
+  $('#stats').innerHTML = [
+    ['Toplam stok', g(tot)], ['Makara', S.spools.length], ['Son 30 gün', g(d30)],
+    ['Açık sipariş', (S.orders||[]).filter(o=>!['teslim','iptal'].includes(o.status)).length],
+    ...(PLAN && PLAN.total ? [['Siparişlere ayrılan', g(PLAN.total)]] : []),
+    ...(val ? [['Stok değeri', val.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺']] : [])
+  ].map(([a,b])=>`<div class="stat"><div class="mut small">${a}</div><div class="big">${b}</div></div>`).join('');
+
+  // baskı
+  const T = S.track;
+  $('#printCard').classList.toggle('hide', !(L && L.printing));
+  if (L && L.printing) {
+    const p = L.progress || 0;
+    $('#printCard').innerHTML = `<h2>Şu an basılıyor <span class="tag acc">${p}%</span></h2>
+      <div class="row" style="justify-content:space-between"><b>${esc(L.file||'—')}</b><span class="mut small">${L.remain_min!=null? L.remain_min+' dk kaldı':''}</span></div>
+      <div class="prog" style="margin:10px 0"><i style="width:${p}%"></i></div>
+      <div class="mut small">Bu baskıda harcanan: <b style="color:var(--ink)">${g(T?.grams||0)}</b>${L.est_m?` · tahmini toplam ${(L.est_m).toFixed(1)} m`:''}</div>
+      ${T?`<div class="row small" style="margin-top:8px"><span class="mut">Bu baskı hangi sipariş için?</span><select style="flex:1" onchange="post('/api/track/order',{order_id:this.value||null})"><option value="">— sipariş yok —</option>${(S.orders||[]).filter(o=>!['teslim','iptal'].includes(o.status)||o.id===T.order_id).map(o=>`<option value="${o.id}" ${o.id===T.order_id?'selected':''}>${esc(o.item||'Sipariş')} · ${esc(o.customer||'')}</option>`).join('')}</select></div>`:''}`;
+  }
+
+  // slotlar
+  {
+    const cloud = !!(L && L.slots.length);
+    $('#slotUpd').textContent = cloud ? 'güncellendi ' + ago(L.updated) : '(elle)';
+    $('#slotHelp').textContent = cloud
+      ? 'Her slota bir makara ata; baskı sırasında takılı slottaki makaradan gram otomatik düşülür.'
+      : 'ACE\'deki hangi slota hangi makarayı taktığını seç — sadece hatırlatma amaçlı. Baskı kaydederken bu makaralar önce gelir.';
+    const slots = cloud ? L.slots : [0,1,2,3].map(i => { const sp = S.spools.find(s=>s.id===S.slot_map['0:'+i]);
+      return {key:'0:'+i, index:i, material: sp?.material || '', color: sp?.color, empty: !sp, manual: true}; });
+    const html = slots.map(sl => {
+      const sid = S.slot_map[sl.key], sp = S.spools.find(s=>s.id===sid), ld = cloud && L.loaded===sl.key;
+      const head = `<div class="row"><div class="sw" style="background:${sp?(sp.color||'#888'):sl.empty?'transparent':(sl.color||'#888')};${!sp&&sl.empty?'border-style:dashed':''}"></div>
+        <div style="min-width:0;flex:1"><b>Slot ${sl.index+1}</b> ${ld?'<span class="tag acc">takılı</span>':''}<div class="mut small">${sp?esc(label(sp)):sl.empty?'boş':esc(sl.material)+' · makara atanmadı'}</div></div></div>`;
+      if (sp) return `<div class="slot ${ld?'loaded':''}">${head}
+        <div class="bar ${barCls(sp)}"><i style="width:${pct(sp)}%"></i></div>
+        <div class="row" style="justify-content:space-between"><span><span class="big" style="font-size:18px">${Math.round(sp.remaining_g)}</span> <span class="mut">/ ${Math.round(sp.total_g)} g</span></span></div>
+        <div class="row" style="gap:4px;margin-top:8px;flex-wrap:wrap">${ctrls(sp.id)}<button class="b mini" onclick="post('/api/assign',{slot:'${sl.key}',spool_id:null})" title="Slottan çıkar, rafa koy">⤓ Rafa</button></div></div>`;
+      const sh = shelf();
+      return `<div class="slot ${ld?'loaded':''}">${head}
+        <select style="margin-top:10px;width:100%" onchange="this.value && post('/api/assign',{slot:'${sl.key}',spool_id:this.value})"><option value="">${sh.length?'— raftan makara tak —':'rafta makara yok'}</option>${sh.map(s=>`<option value="${s.id}">${esc(label(s))} (${Math.round(s.remaining_g)} g)</option>`).join('')}</select>
+        <button class="b mini" style="margin-top:6px" onclick="newFromSlot('${sl.key}')">+ Yeni makara tak</button></div>`; }).join('');
+    $('#slots').innerHTML = html; $('#slots2').innerHTML = html;
+  }
+
+  // azalanlar
+  const low = S.spools.filter(s=>s.remaining_g <= S.settings.low_g).sort((a,b)=>a.remaining_g-b.remaining_g);
+  $('#low').innerHTML = low.length ? low.map(s=>`<div class="row" style="margin:4px 0"><div class="sw" style="width:16px;height:16px;background:${s.color||'#888'}"></div><span style="color:var(--ink)">${esc(label(s))}</span><b class="${s.remaining_g<=S.settings.low_g*.5?'err':''}" style="margin-left:auto">${g(s.remaining_g)}</b></div>`).join('') : 'Hepsi yeterli 👍';
+
+  // makaralar
+  const q = $('#q').value.toLowerCase();
+  const sh = shelf(), list = sh.filter(s=>label(s).toLowerCase().includes(q));
+  const empty = '<div class="mut">Rafta makara yok. “+ Makara ekle” ile ekle.</div>';
+  $('#spools').innerHTML = list.length ? list.map(spoolCard).join('') : empty;
+  $('#panoSpools').innerHTML = sh.length ? sh.map(spoolCard).join('') : empty;
+  $('#shelfN').textContent = $('#shelfN2').textContent = sh.length + ' adet · ' + g(sh.reduce((a,s)=>a+s.remaining_g,0));
+
+  // geçmiş + modüller
+  renderHist(); renderOrders(); renderPurchases(); renderPriceTable(); renderProducts(); renderPlan();
+}
+function ctrls(id){ return `<button class="b mini" onclick="adj('${id}',-10)">−10</button><button class="b mini" onclick="adjAsk('${id}')">±</button><button class="b mini" onclick="weigh('${id}')">Tart</button><button class="b mini" onclick="editSpool('${id}')">✎</button>`; }
+function aceSlotKeys(){ return S.live?.slots?.length ? S.live.slots.map(x=>x.key) : ['0:0','0:1','0:2','0:3']; }
+function spoolCard(s){ const sl = slotOf(s.id);
+    return `<div class="spool"><div class="row"><div class="sw" style="background:${s.color||'#888'}"></div>
+      <div style="min-width:0;flex:1"><b>${esc(s.name||s.material)}</b>${sl?` <span class="tag acc">Slot ${+sl.split(':')[1]+1}</span>`:''}<div class="mut small">${esc([s.brand,s.material].filter(Boolean).join(' · '))}</div></div>
+</div>
+      <div class="bar ${barCls(s)}"><i style="width:${pct(s)}%"></i></div>
+      <div class="row" style="justify-content:space-between"><span><span class="big" style="font-size:18px">${Math.round(s.remaining_g)}</span> <span class="mut">/ ${Math.round(s.total_g)} g</span></span><span class="small ${ownGP(s)?'mut':'err'}" title="${ownGP(s)?'':'Fiyat girilmemiş — ✎ ile ekle'}">${ownGP(s)?kg(ownGP(s)):'fiyat yok'}</span></div>
+      <div class="row" style="gap:4px;margin-top:8px;flex-wrap:wrap">${ctrls(s.id)}</div>
+      <select style="margin-top:8px;width:100%" onchange="this.value && post('/api/assign',{slot:this.value,spool_id:'${s.id}'})"><option value="">🎛️ ACE'ye tak…</option>${aceSlotKeys().map(k=>{const o=S.spools.find(x=>x.id===S.slot_map[k]);return `<option value="${k}">Slot ${+k.split(':')[1]+1}${o?' (yerine: '+esc(o.name||o.material)+' rafa)':' (boş)'}</option>`}).join('')}</select>
+      ${s.notes?`<div class="mut small" style="margin-top:6px">${esc(s.notes)}</div>`:''}</div>`; }
+function renderHist(){
+  const L = S.live, err = S.cloud_error;
+  const nm = k => { const s = S.spools.find(x=>x.id===k); return s ? label(s) : k.replace('slot:','Atanmamış slot '); };
+  const oopts = id => `<option value="">—</option>` + (S.orders||[]).map(o=>`<option value="${o.id}" ${o.id===id?'selected':''}>${esc(o.item||'Sipariş')}${o.customer?' · '+esc(o.customer):''}</option>`).join('');
+  $('#hist').innerHTML = S.history.length ? `<div style="overflow-x:auto"><table><tr><th>Tarih</th><th>Dosya</th><th>Makara</th><th>Sipariş</th><th style="text-align:right">Gram</th><th style="text-align:right">Maliyet</th><th></th></tr>` +
+    S.history.map(h=>`<tr><td class="mut">${dt(h.ts)}</td><td>${esc(h.file||'—')}${h.kind==='reserve'?' <span class="tag" title="Sipariş Basılıyor yapılınca düşülen tahmini gram">📌 tahmini</span>':''}${h.progress!=null&&h.progress<100?` <span class="tag">%${h.progress}'de bitti</span>`:''}${h.hours?` <span class="mut small">${Math.round(h.hours*10)/10} sa</span>`:''}</td><td class="small">${Object.keys(h.per_spool||{}).map(k=>esc(nm(k))).join(', ')||'—'}</td>
+      <td><select style="max-width:170px;font-size:12px;padding:3px 6px" onchange="post('/api/history/order',{ts:${h.ts},order_id:this.value||null})">${oopts(h.order_id)}</select></td>
+      <td style="text-align:right"><b>${g(h.grams)}</b></td><td style="text-align:right" class="small">${money((h.fil_cost||0)+elecCost(h.hours))}</td><td><button class="b mini" onclick="delHist(${h.ts})">✕</button></td></tr>`).join('') + '</table></div>'
+    : '<div class="mut">Henüz kayıt yok. Pano\'dan “✓ Baskı kaydet” ile ekle (Anycubic bağlıysa otomatik eklenir).</div>';
+  $('#log').innerHTML = S.log.map(l=>`<div><span class="mut">${dt(l.ts)}</span> ${esc(l.msg)}</div>`).join('') || '<span class="mut">—</span>';
+
+  // ayarlar
+  const mode = S.settings.mode || 'manual';
+  document.querySelectorAll('#modes input').forEach(r => r.checked = r.value === mode);
+  $('#lanCard').classList.toggle('hide', mode !== 'lan'); $('#cloudCard').classList.toggle('hide', mode !== 'cloud');
+  if (document.activeElement !== $('#lanip') && !$('#lanip').value) $('#lanip').value = S.settings.lan_host || '';
+  const ls = S.lan_status || {};
+  $('#lanState').textContent = !S.settings.lan_host ? 'ayarlanmadı' : ls.connected ? 'bağlı' : ls.error ? 'bağlanamadı' : 'bağlanıyor…';
+  $('#lanState').className = 'tag ' + (ls.connected ? 'acc' : '');
+  for (const k of ['kwh_price','printer_watt','labor_hour','margin','default_kg']) { const i = $('#costf')[k]; if (document.activeElement !== i) i.value = S.settings[k] ?? ''; }
+  $('#tokState').textContent = S.has_token ? (err ? 'hata' : 'bağlı') : 'bağlı değil';
+  $('#tokState').className = 'tag ' + (S.has_token && !err ? 'acc' : '');
+  if (document.activeElement !== $('#lowg')) $('#lowg').value = S.settings.low_g;
+  $('#autod').checked = S.settings.auto_deduct; $('#ordd').checked = S.settings.order_deduct !== false;
+  $('#prSel').classList.toggle('hide', !(S.printers && S.printers.length > 1));
+  if (S.printers) $('#printer').innerHTML = S.printers.map(p=>`<option value="${p.id}" ${p.id===S.printer_id?'selected':''}>${esc(p.name)}</option>`).join('');
+}
+
+// ===================== Para / maliyet =====================
+const ORDER_ST = {bekliyor:'Bekliyor', basiliyor:'Basılıyor', hazir:'Hazır', teslim:'Teslim edildi', iptal:'İptal'};
+const PUR_ST = {liste:'Alınacak', siparis:'Sipariş verildi', kargoda:'Kargoda', teslim:'Teslim alındı'};
+const money = n => (Math.round((n||0)*100)/100).toLocaleString('tr-TR', {minimumFractionDigits: (Math.abs(n)<100 && n%1)?2:0, maximumFractionDigits:2}) + ' ₺';
+const today = () => new Date().toISOString().slice(0,10);
+const fmtDate = d => d ? new Date(d+'T00:00').toLocaleDateString('tr-TR', {day:'numeric', month:'short'}) : '';
+const matOf = s => String(s.material||'PLA').toUpperCase().trim();
+const grpKey = s => matOf(s) + '|' + String(s.name || s.color || '').trim().toLocaleLowerCase('tr-TR');
+const ownGP = s => s && +s.price && +s.total_g ? s.price / s.total_g : 0;
+function avgOf(list){ const ps = list.filter(ownGP); const tg = ps.reduce((a,s)=>a+ +s.total_g,0); return tg ? ps.reduce((a,s)=>a+ +s.price,0)/tg : 0; }
+function avgGramPrice(){ return avgOf(S.spools) || (S.settings.default_kg||0)/1000; }
+// ref: makara id | 'g:MALZEME|renk' | 'm:MALZEME' | '' → {p: ₺/g, src}
+function gramPriceFor(ref){
+  ref = ref || '';
+  if (ref.startsWith('g:')) { const k = ref.slice(2), p = avgOf(S.spools.filter(s=>grpKey(s)===k)); if (p) return {p, src:'bu renk'}; ref = 'm:' + k.split('|')[0]; }
+  if (ref.startsWith('m:')) { const m = ref.slice(2), p = avgOf(S.spools.filter(s=>matOf(s)===m)); if (p) return {p, src: m + ' ortalaması'}; }
+  else if (ref) { const s = S.spools.find(x=>x.id===ref); if (s) return ownGP(s) ? {p: ownGP(s), src:'makara'} : gramPriceFor('g:' + grpKey(s)); }
+  const a = avgOf(S.spools); return a ? {p:a, src:'genel ortalama'} : {p:(S.settings.default_kg||0)/1000, src:'varsayılan'};
+}
+function groups(){
+  const m = new Map();
+  for (const s of ordered(S.spools)) { const k = grpKey(s);
+    if (!m.has(k)) m.set(k, {key:k, material:matOf(s), name:s.name||'', color:s.color, brands:new Set(), spools:[]});
+    const x = m.get(k); x.spools.push(s); if (s.brand) x.brands.add(s.brand); }
+  return [...m.values()].map(x => ({...x, rem: x.spools.reduce((a,s)=>a+Math.max(0,s.remaining_g||0),0),
+    gp: gramPriceFor('g:'+x.key), missing: x.spools.filter(s=>!ownGP(s)).length}))
+    .sort((a,b)=>a.material.localeCompare(b.material) || a.name.localeCompare(b.name,'tr'));
+}
+const kg = p => money(p*1000) + '/kg';
+const hrs = h => (Math.round(h*10)/10).toLocaleString('tr-TR') + ' sa';
+function refInfo(ref){
+  if (ref?.startsWith('g:')) { const x = groups().find(z=>z.key===ref.slice(2)); if (x) return {label:[x.material, x.name].filter(Boolean).join(' · '), color:x.color, rem:x.rem}; return {label: ref.slice(2).replace('|',' · '), color:null, rem:0}; }
+  if (ref?.startsWith('m:')) { const m = ref.slice(2); return {label: m + ' (renk farketmez)', color:null, rem: S.spools.filter(s=>matOf(s)===m).reduce((a,s)=>a+Math.max(0,s.remaining_g||0),0)}; }
+  return {label:'Genel ortalama', color:null, rem:null};
+}
+function refOptions(sel){
+  const G = groups(), mats = [...new Set(G.map(x=>x.material))];
+  return `<optgroup label="Renk">${G.map(x=>`<option value="g:${esc(x.key)}" ${sel==='g:'+x.key?'selected':''}>${esc([x.material, x.name||x.color].filter(Boolean).join(' · '))} — ${x.gp.p?kg(x.gp.p):'fiyat yok'} · ${Math.round(x.rem)} g stok</option>`).join('')}</optgroup>
+    <optgroup label="Malzeme">${mats.map(m=>`<option value="m:${esc(m)}" ${sel==='m:'+m?'selected':''}>${esc(m)} (renk farketmez) — ${kg(gramPriceFor('m:'+m).p)}</option>`).join('')}</optgroup>
+    <option value="" ${!sel?'selected':''}>Genel ortalama — ${kg(gramPriceFor('').p)}</option>` +
+    (sel && !G.some(x=>'g:'+x.key===sel) && !mats.some(m=>'m:'+m===sel) ? `<option value="${esc(sel)}" selected>${esc(refInfo(sel).label)} (stokta yok)</option>` : '');
+}
+function renderPriceTable(){
+  const G = groups();
+  if (!G.length) { $('#ptab').innerHTML = '<div class="mut">Henüz makara yok.</div>'; return; }
+  const val = S.spools.reduce((a,s)=>a+Math.max(0,s.remaining_g||0)*gramPriceFor(s.id).p,0);
+  $('#ptab').innerHTML = `<div style="overflow-x:auto"><table class="ptab"><tr><th>Renk</th><th>Marka</th><th style="text-align:right">Makara</th><th style="text-align:right">Stok</th><th style="text-align:right">Fiyat</th><th style="text-align:right">Stok değeri</th></tr>` +
+    G.map(x=>`<tr><td><span class="row" style="gap:8px"><i class="sw" style="width:16px;height:16px;border-width:1px;background:${x.color||'#888'}"></i><b>${esc(x.material)}</b> ${esc(x.name||x.color||'')}</span></td>
+      <td class="small mut">${esc([...x.brands].join(', ')||'—')}</td><td style="text-align:right">${x.spools.length}</td><td style="text-align:right">${g(x.rem)}</td>
+      <td style="text-align:right">${x.gp.p?`<b>${kg(x.gp.p)}</b>${x.gp.src!=='bu renk'?` <span class="tag" title="Bu rengin fiyatı girilmemiş">${esc(x.gp.src)}</span>`:''}`:'<span class="err small">fiyat yok</span>'}${x.missing&&x.gp.src==='bu renk'?` <span class="tag" title="Fiyatsız makaralar bu ortalamayı kullanır">${x.missing} fiyatsız</span>`:''}</td>
+      <td style="text-align:right">${money(x.rem*x.gp.p)}</td></tr>`).join('') +
+    `<tr><td colspan="5" style="text-align:right" class="mut">Toplam stok değeri</td><td style="text-align:right"><b>${money(val)}</b></td></tr></table></div>`;
+}
+function estItems(o){ const it = (o.est_items||[]).filter(i=>+i.g>0).map(i=>({ref:i.ref||'', g:+i.g}));
+  return it.length ? it : (+o.est_g ? [{ref:'', g:+o.est_g}] : []); }
+function elecCost(h){ const st = S.settings; return (h||0) * (st.printer_watt||0)/1000 * (st.kwh_price||0); }
+function orderCost(o){
+  const prints = S.history.filter(h=>h.order_id===o.id);
+  const grams = prints.reduce((a,h)=>a+(h.grams||0),0), hours = prints.reduce((a,h)=>a+(h.hours||0),0);
+  let fil = prints.reduce((a,h)=>a+(h.fil_cost || Object.entries(h.per_spool||{}).reduce((b,[k,gr])=>b+gr*gramPriceFor(k).p,0) || (h.grams||0)*avgGramPrice()),0), estimated = false;
+  let elec = elecCost(hours);
+  const items = estItems(o), q = +o.qty||1;
+  if (!prints.length) { estimated = true; fil = items.reduce((a,i)=>a + i.g*gramPriceFor(i.ref).p, 0) * q; elec = elecCost((+o.est_h||0) * q); }
+  const labor = (+o.labor_h||0) * (S.settings.labor_hour||0), extra = +o.extra_cost||0;
+  const total = fil + elec + labor + extra;
+  return {prints, grams, hours, fil, elec, labor, extra, total, estimated, price: +o.price||0, profit: (+o.price||0) - total};
+}
+const stBadge = (st, map) => `<span class="st st-${st}">${map[st]||st}</span>`;
+async function setStatus(id, st){ const j = await post('/api/order', {id, status: st, ...(st==='teslim'?{delivered_at: Date.now()/1000}:{})}); if (j.msg) toast(j.msg); }
+function isLate(o){ return o.due && !['teslim','iptal'].includes(o.status) && o.due < today(); }
+
+// ===================== Siparişler =====================
+let ofilter = 'acik';
+function orderCard(o, compact){
+  const c = orderCost(o), late = isLate(o);
+  const opts = Object.entries(ORDER_ST).map(([k,v])=>`<option value="${k}" ${k===o.status?'selected':''}>${v}</option>`).join('');
+  return `<div class="oc">
+    <div class="top"><div style="flex:1;min-width:180px"><div class="ttl">${esc(o.item||'Sipariş')}${(+o.qty||1)>1?` <span class="mut">× ${+o.qty}</span>`:''}</div>
+      <div class="mut small">${esc(o.customer||'Müşteri yok')}${o.contact?' · '+esc(o.contact):''}</div></div>
+      ${o.due?`<span class="small ${late?'err':'mut'}">${late?'⚠️ gecikti · ':'📅 '}${fmtDate(o.due)}</span>`:''}
+      <select class="mini" style="padding:3px 6px;font-size:12px" onchange="setStatus('${o.id}',this.value)">${opts}</select></div>
+    ${c.prints.length||!estItems(o).length?'':`<div class="row small" style="flex-wrap:wrap;gap:6px">${estItems(o).map(i=>{const r=refInfo(i.ref), need=i.g*(+o.qty||1), pr=PLAN?.byKey[i.ref], low=pr&&pr.state==='short'&&OPEN_ST.includes(o.status);
+      return `<span class="tag" style="display:inline-flex;align-items:center;gap:5px" ${low?'title="Tüm açık siparişler için bu renkten yeterli stok yok"':''}>${r.color?`<i class="sw" style="width:10px;height:10px;border-width:1px;background:${r.color}"></i>`:''}${esc(r.label)} · ${g(need)}${low?` <b class="err">⚠️ ${g(-pr.after)} eksik</b>`:''}</span>`}).join('')}</div>`}
+    ${compact?'':`<div class="money"><span>Filament <b>${money(c.fil)}</b></span><span>Elektrik <b>${money(c.elec)}</b></span>${c.labor?`<span>İşçilik <b>${money(c.labor)}</b></span>`:''}${c.extra?`<span>Ek <b>${money(c.extra)}</b></span>`:''}
+      <span>Maliyet <b>${money(c.total)}</b>${c.estimated?' <span class="tag">tahmini</span>':''}</span><span>Fiyat <b>${c.price?money(c.price):'—'}</b></span>${c.price?`<span>Kâr <b class="${c.profit>=0?'pos':'neg'}">${money(c.profit)}</b></span>`:''}</div>`}
+    <div class="row small" style="flex-wrap:wrap;gap:6px"><span class="mut" style="flex:1">${(()=>{ const real = c.prints.filter(h=>h.kind!=='reserve'), res = c.prints.find(h=>h.kind==='reserve');
+      const rg = real.reduce((a,h)=>a+(h.grams||0),0);
+      return [real.length ? `${real.length} baskı · ${g(rg)}` : (res ? '' : 'Henüz baskı bağlanmadı'),
+        res ? `<span title="Sipariş 'Basılıyor' yapılınca tahmini gram stoktan düşüldü; gerçek baskı bağlandıkça düzeltilir">📌 ${g(res.grams)} tahmini stoktan düşüldü</span>` : '',
+        c.hours ? hrs(c.hours) : ''].filter(Boolean).join(' · '); })()}</span>
+      <button class="b mini" onclick="logPrint('${o.id}')">✓ Baskı ekle</button><button class="b mini" onclick="editOrder('${o.id}')">Düzenle</button></div>
+  </div>`;
+}
+function renderOrders(){
+  const O = S.orders || [];
+  const month = new Date(); month.setDate(1); month.setHours(0,0,0,0); const m0 = month/1000;
+  const done = O.filter(o=>o.status==='teslim' && (o.delivered_at||o.created) >= m0);
+  const open = O.filter(o=>!['teslim','iptal'].includes(o.status));
+  $('#ostats').innerHTML = [['Açık sipariş', open.length], ['Geciken', O.filter(isLate).length],
+    ['Bu ay ciro', money(done.reduce((a,o)=>a+(+o.price||0),0))], ['Bu ay kâr', money(done.reduce((a,o)=>a+orderCost(o).profit,0))]]
+    .map(([a,b])=>`<div class="stat"><div class="mut small">${a}</div><div class="big">${b}</div></div>`).join('');
+  const F = {acik:'Açık', hepsi:'Tümü', ...ORDER_ST};
+  $('#ofilt').innerHTML = Object.entries(F).map(([k,v])=>`<button class="${k===ofilter?'act':''}" onclick="ofilter='${k}';renderOrders()">${v}</button>`).join('');
+  const q = ($('#oq').value||'').toLowerCase();
+  const list = O.filter(o => ofilter==='hepsi' || (ofilter==='acik' ? open.includes(o) : o.status===ofilter))
+    .filter(o => `${o.customer} ${o.item} ${o.contact}`.toLowerCase().includes(q))
+    .sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999') || a.created-b.created);
+  $('#orders').innerHTML = list.length ? list.map(o=>orderCard(o)).join('') : '<div class="mut">Bu filtrede sipariş yok. “+ Yeni sipariş” ile ekle.</div>';
+  const up = open.sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')).slice(0,3);
+  $('#panoOrders').innerHTML = up.length ? up.map(o=>orderCard(o, true)).join('') : '<div class="mut">Açık sipariş yok.</div>';
+}
+// ===================== Stok planı (açık siparişler için ayrılan filament) =====================
+const OPEN_ST = ['bekliyor','basiliyor'];
+let PLAN = null;
+function printedByGroup(orderId){
+  const m = {};
+  for (const h of S.history) if (h.order_id === orderId)
+    for (const [k,gr] of Object.entries(h.per_spool||{})) { const s = S.spools.find(x=>x.id===k); const key = s ? grpKey(s) : '?'; m[key] = (m[key]||0) + gr; }
+  return m;
+}
+function reservations(excludeId){
+  const out = [];
+  for (const o of (S.orders||[])) {
+    if (!OPEN_ST.includes(o.status) || o.id === excludeId) continue;
+    const pr = printedByGroup(o.id), q = +o.qty||1;
+    for (const it of estItems(o)) {
+      let need = it.g * q;   // bu siparişe zaten basılan gramlar düşülür
+      const take = keys => { for (const k of keys) { const t = Math.min(need, pr[k]||0); pr[k] = (pr[k]||0) - t; need -= t; } };
+      if (it.ref.startsWith('g:')) take([it.ref.slice(2)]);
+      else if (it.ref.startsWith('m:')) take(Object.keys(pr).filter(k=>k.split('|')[0]===it.ref.slice(2)));
+      else take(Object.keys(pr));
+      if (need > 0.5) out.push({ref: it.ref, g: need, order: o});
+    }
+  }
+  return out;
+}
+function stockPlan(excludeId){
+  const low = S.settings.low_g||0, G = groups();
+  const byKey = {};
+  for (const x of G) byKey['g:'+x.key] = {key:'g:'+x.key, label:[x.material, x.name||x.color].filter(Boolean).join(' · '), name:x.name, color:x.color,
+    material:x.material, brand:[...x.brands][0]||'', rem:x.rem, res:0, orders:new Set(), gp:x.gp};
+  for (const r of reservations(excludeId)) {
+    if (!byKey[r.ref]) { const info = refInfo(r.ref), ref = r.ref;
+      byKey[ref] = {key:ref, label: ref.startsWith('g:') ? info.label : ref ? info.label : 'Rengi seçilmemiş', name: ref.startsWith('g:') ? ref.slice(2).split('|')[1] : '',
+        color:info.color, material: ref.startsWith('m:') ? ref.slice(2) : ref.startsWith('g:') ? ref.slice(2).split('|')[0] : '',
+        brand:'', rem: ref.startsWith('g:') ? 0 : null, res:0, orders:new Set(), gp:gramPriceFor(ref), generic: !ref.startsWith('g:')}; }
+    byKey[r.ref].res += r.g; byKey[r.ref].orders.add(r.order.id);
+  }
+  const rows = Object.values(byKey);
+  for (const r of rows) {
+    if (r.key.startsWith('m:')) { const ms = rows.filter(x=>!x.generic && x.material===r.material);
+      r.rem = ms.reduce((a,x)=>a+x.rem,0); r.after = r.rem - r.res - ms.reduce((a,x)=>a+x.res,0); }
+    else if (r.generic) r.after = null;
+    else r.after = r.rem - r.res;
+    r.avail = r.after == null ? null : r.after;
+    r.state = r.after == null ? 'unk' : r.after < 0 ? 'short' : r.after < low ? 'low' : 'ok';
+  }
+  const used = rows.filter(r=>r.res > 0).sort((a,b)=>({short:0,low:1,unk:2,ok:3}[a.state]-{short:0,low:1,unk:2,ok:3}[b.state]) || b.res-a.res);
+  return {rows: used, byKey, total: used.reduce((a,r)=>a+r.res,0)};
+}
+function renderPlan(){
+  const P = PLAN, orders = new Set(P.rows.flatMap(r=>[...r.orders]));
+  const html = !P.rows.length ? '<div class="mut">Açık siparişlerde filament tahmini yok. Siparişe renk + gram girince burada ne kadar ayrıldığı ve sonra ne kalacağı görünür.</div>' :
+    `<div class="mut small" style="margin-bottom:8px">${orders.size} açık sipariş için <b style="color:var(--ink)">${g(P.total)}</b> ayrıldı. Makaralardaki gramlar değişmez; bu sadece plan.</div>` +
+    P.rows.map(r => `<div class="prow"><i class="sw" style="width:22px;height:22px;background:${r.color||'#888'}"></i>
+      <div style="flex:1;min-width:0"><b>${esc(r.label)}</b><div class="mut small">${r.orders.size} sipariş · ${r.rem!=null?`stok ${g(r.rem)} − ayrılan ${g(r.res)}`:`ayrılan ${g(r.res)}`}</div></div>
+      <div style="text-align:right">${r.after!=null?`<b class="${r.state==='short'?'err':r.state==='low'?'warnc':''}">→ ${g(Math.max(r.after,0))}</b>`:''}
+      <div class="small">${r.state==='short'?`<b class="err">${g(-r.after)} eksik · sipariş ver</b>`:r.state==='low'?`<span class="warnc">az kalacak</span>`:r.state==='unk'?'<span class="mut">renk seçilmemiş</span>':'<span class="mut">yeterli</span>'}</div></div></div>`).join('') +
+    (P.rows.some(r=>r.state==='short'||r.state==='low') && P.rows.some(r=>!r.generic&&(r.state==='short'||r.state==='low')) ? `<button class="b mini" style="margin-top:10px" onclick="buyMissing()">🛒 Eksikleri alım listesine ekle</button>` : '');
+  for (const id of ['#panoPlan','#sipPlan']) $(id).innerHTML = html;
+  $('#panoPlanCard').classList.toggle('hide', !P.rows.length);
+}
+async function buyMissing(){
+  const low = S.settings.low_g||0;
+  const need = PLAN.rows.filter(r=>!r.generic && (r.state==='short'||r.state==='low'));
+  if (!need.length) return;
+  const items = need.map(r => ({brand:r.brand, material:r.material, name:r.name||'', color:r.color||'#888888', weight_g:1000,
+    qty: Math.max(1, Math.ceil((low - r.after)/1000)), unit_price: r.gp.p ? Math.round(r.gp.p*1000) : ''}));
+  const j = await post('/api/purchase', {status:'liste', items, notes:'Sipariş planından: ' + need.map(r=>`${r.label} ${r.state==='short'?g(-r.after)+' eksik':'az kalacak'}`).join(', ')});
+  tab('alim'); toast('Alım listesine eklendi'); editPurchase(j.id);
+}
+
+// ===================== Slicer dosyasından içe aktarma =====================
+function hexRGB(h){ const m = /^#?([0-9a-f]{6})/i.exec(h||''); if (!m) return null; const n = parseInt(m[1],16); return [n>>16,(n>>8)&255,n&255]; }
+function matchRef(it){
+  const mat = String(it.type||'PLA').toUpperCase().trim(), c = hexRGB(it.color), G = groups().filter(x=>x.material===mat);
+  let best = null, bd = 1e9;
+  for (const x of G) { const xc = hexRGB(x.color); if (!c || !xc) continue; const d = Math.hypot(c[0]-xc[0], c[1]-xc[1], c[2]-xc[2]); if (d < bd) { bd = d; best = x; } }
+  if (best && bd < 90) return {ref:'g:'+best.key};
+  return {ref: G.length ? 'm:'+mat : '', miss: `${mat} ${it.color||''}`};
+}
+function slicerItems(parsed){
+  const m = new Map(), miss = [];
+  for (const it of parsed.items) { const r = matchRef(it); if (r.miss) miss.push(r.miss); m.set(r.ref, (m.get(r.ref)||0) + it.g); }
+  return {items: [...m].map(([ref,gr])=>({ref, g: Math.round(gr*10)/10})), miss};
+}
+async function parseFile(f){
+  const blob = /\.3mf$/i.test(f.name) || f.size <= 1900000 ? f : new Blob([f.slice(0, 400000), '\n', f.slice(f.size - 1500000)]);
+  const r = await fetch('/api/slicer/parse?name=' + encodeURIComponent(f.name), {method:'POST', headers:{'X-Filament':'1','Content-Type':'application/octet-stream'}, body: blob});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Dosya okunamadı'); return j;
+}
+const importBar = `<div class="imp"><div class="row small" style="gap:6px;flex-wrap:wrap">
+  <button type="button" class="b mini" data-imp="recent">🧩 Slicer'daki son dilimleme</button>
+  <label class="b mini" style="cursor:pointer">📄 G-code / 3mf seç<input type="file" accept=".gcode,.3mf" hidden data-imp="file"></label>
+  <span class="mut">ya da dosyayı bu pencereye sürükle</span></div><div class="implist"></div><div class="impmsg small"></div></div>`;
+function wireImport(d, apply){
+  const msg = (t, bad) => { const m = d.querySelector('.impmsg'); m.innerHTML = t; m.className = 'impmsg small ' + (bad?'err':''); };
+  const L = () => d.querySelector('.implist');
+  const choice = (list, pick) => { L().innerHTML = list.map((p,i)=>`<button type="button" class="b mini" data-i="${i}" style="justify-content:flex-start;text-align:left">
+      <span style="display:inline-flex;gap:3px">${p.items.map(x=>`<i class="sw" style="width:10px;height:10px;border-width:1px;background:${x.color||'#888'}"></i>`).join('')}</span>
+      <b>${esc(p.label || p.name)}</b> <span class="mut">${g(p.total_g)}${p.hours?' · '+hrs(p.hours):''}${p.mtime?' · '+ago(p.mtime):''}</span></button>`).join('');
+    L().onclick = e => { const b = e.target.closest('[data-i]'); if (!b) return; L().innerHTML = ''; pick(list[+b.dataset.i]); }; };
+  const use = p => {
+    if (p.plates?.length > 1) { msg(`<b>${esc(p.name)}</b> içinde ${p.plates.length} tabla var. Hangisi?`);
+      return choice([{...p, plates:null, label:`Hepsi (${p.plates.length} tabla)`}, ...p.plates], use); }
+    const s = slicerItems(p); apply(p, s.items);
+    msg(`✓ <b>${esc(p.name)}</b> ${p.sliced?'dilimlendi':'yüklendi'}: ${g(p.total_g)}${p.hours?' · '+hrs(p.hours):''} · ${p.items.length} renk` +
+      (p.printer && !/kobra s1/i.test(p.printer) ? `<br><span class="warnc">Bu proje “${esc(p.printer)}” ayarlarıyla hazırlanmış; gram yakın ama süre Kobra S1'de farklı olabilir.</span>` : '') +
+      (s.miss.length ? `<br><span class="warnc">Stokta karşılığı yok: ${esc(s.miss.join(', '))} — listeden doğru rengi seç.</span>` : '')); };
+  const fromFile = f => { L().innerHTML = ''; msg(/\.3mf$/i.test(f.name) ? '⏳ Okunuyor… dilimlenmemiş bir projeyse Anycubic Slicer arka planda dilimliyor (birkaç saniye sürebilir).' : 'Okunuyor…');
+    parseFile(f).then(use).catch(e=>msg(esc(e.message), true)); };
+  d.querySelector('[data-imp=recent]').onclick = async () => {
+    msg('Aranıyor…'); const r = await (await fetch('/api/slicer/recent')).json();
+    if (!r.items?.length) { L().innerHTML = ''; return msg("Slicer'da yakın zamanda dilimlenmiş dosya bulunamadı. Anycubic Slicer Next'te dilimle, sonra tekrar dene — ya da .3mf dosyasını doğrudan seç.", true); }
+    msg('Hangisi?'); choice(r.items, use);
+  };
+  d.querySelector('[data-imp=file]').onchange = e => e.target.files[0] && fromFile(e.target.files[0]);
+  d.ondragover = e => { e.preventDefault(); d.classList.add('drop'); };
+  d.ondragleave = e => { if (e.target === d) d.classList.remove('drop'); };
+  d.ondrop = e => { e.preventDefault(); d.classList.remove('drop'); const f = e.dataTransfer.files[0]; if (f) fromFile(f); };
+}
+function unwireImport(){ const d = $('#mdlg'); d.ondragover = d.ondragleave = d.ondrop = null; d.classList.remove('wide','drop'); }
+
+// ===================== Filament satırları (sipariş + ürün ortak) =====================
+function itemsEditor(box, items, onChange){
+  const addRow = (it={}) => { const r = document.createElement('div'); r.className = 'frow';
+    r.innerHTML = `<select data-k="ref">${refOptions(it.ref ?? (groups()[0] ? 'g:'+groups()[0].key : ''))}</select><input data-k="g" type="number" step="0.1" min="0" placeholder="gram" value="${it.g??''}"><span class="small mut fc"></span><button type="button" class="b mini" title="Kaldır">✕</button>`;
+    r.querySelector('button').onclick = () => { r.remove(); onChange(); }; box.appendChild(r); };
+  const rows = () => [...box.children].map(r=>({ref:r.querySelector('[data-k=ref]').value, g:+r.querySelector('[data-k=g]').value||0}));
+  const set = list => { box.innerHTML = ''; (list.length ? list : [{}]).forEach(addRow); onChange(); };
+  const annotate = (q, excludeId) => { const P = stockPlan(excludeId), mine = {};
+    rows().forEach((it,i) => { const r = box.children[i], gp = gramPriceFor(it.ref); mine[it.ref] = (mine[it.ref]||0) + it.g*q;
+      const pr = P.byKey[it.ref], avail = it.ref.startsWith('g:') ? (pr ? pr.rem - pr.res : 0) : it.ref.startsWith('m:') && pr ? pr.after + pr.res : it.ref.startsWith('m:') ? S.spools.filter(s=>matOf(s)===it.ref.slice(2)).reduce((a,s)=>a+Math.max(0,s.remaining_g||0),0) : null;
+      const other = pr ? pr.res : 0, short = avail != null && mine[it.ref] > avail;
+      r.querySelector('.fc').innerHTML = it.g ? `${money(it.g*gp.p)}/adet <span class="mut">(${kg(gp.p)}${gp.src!=='bu renk'&&gp.src!=='makara'?', '+esc(gp.src):''})</span>` +
+        (short ? ` <b class="err">⚠️ ${Math.round(Math.max(avail,0))} g kullanılabilir${other>0.5?` (${Math.round(other)} g diğer siparişlere ayrılmış)`:''}</b>` : '') : ''; }); };
+  set(items);
+  return {addRow, rows, set, annotate};
+}
+const fromProduct = p => ({item:p.name, est_items:p.est_items||[], est_h:p.est_h, labor_h:p.labor_h, extra_cost:p.extra_cost, product_id:p.id});
+
+// ===================== Sipariş penceresi =====================
+async function editOrder(id, preset){
+  let o = (S.orders||[]).find(x=>x.id===id) || {qty:1, status:'bekliyor', due:''};
+  if (preset?.product_id) { const p = (S.products||[]).find(x=>x.id===preset.product_id); if (p) o = {...o, ...fromProduct(p), price: +p.price||''}; }
+  const f = (n, lbl, attrs='') => `<label>${lbl}<input name="${n}" value="${esc(o[n]??'')}" ${attrs}></label>`;
+  const prodOpts = sel => `<option value="">— elle gir —</option>` + (S.products||[]).map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}${+p.price?' · '+money(+p.price):''}</option>`).join('');
+  let ed;
+  const v = await modal({
+    body: `<h3 style="margin:0 0 12px;font-size:15px">${id?'Siparişi düzenle':'Yeni sipariş'}</h3><form class="mform" id="of" onsubmit="return false">
+      <div class="two">${f('customer','Müşteri','placeholder="ör. Ahmet Y."')}${f('contact','İletişim (tel / IG)','')}</div>
+      <div class="two"><label>Katalogdan ürün<select name="product_id">${prodOpts(o.product_id)}</select></label>${f('item','Ürün / açıklama','placeholder="ör. Telefon standı"')}</div>
+      <div class="two">${f('qty','Adet','type="number" min="1" step="1"')}${f('due','Teslim tarihi','type="date"')}</div>
+      ${importBar}
+      <div><div class="mut small" style="margin-bottom:4px">Filament (adet başı, slicer'daki gram) — çok renkliyse her renk için satır ekle</div>
+        <div id="oitems" style="display:grid;gap:6px"></div><button type="button" class="b mini" id="oadd" style="margin-top:6px">+ Renk ekle</button></div>
+      <div class="two">${f('est_h','Tahmini baskı süresi (sa, adet başı)','type="number" step="0.01"')}${f('labor_h','Senin işçiliğin (saat)','type="number" step="0.1" placeholder="zımpara, boya…"')}</div>
+      <div class="three">${f('extra_cost','Ek masraf (₺)','type="number" step="0.01" placeholder="kutu, kargo, boya"')}${f('price','Satış fiyatı (₺, toplam)','type="number" step="0.01"')}
+        <label>Durum<select name="status">${Object.entries(ORDER_ST).map(([k,l])=>`<option value="${k}" ${k===o.status?'selected':''}>${l}</option>`).join('')}</select></label></div>
+      ${f('notes','Not','')}
+      <div class="preview" style="margin:0"><span class="small" id="oprev"></span><span class="row" style="gap:6px"><button type="button" class="b mini" id="ocat" title="Bu ürünü kataloğa kaydet, sonraki siparişlerde tek tıkla seç">⭐ Kataloğa kaydet</button><button type="button" class="b mini" id="osug">Öneriyi kullan</button></span></div>
+    </form>`,
+    buttons: [...(id?[{label:'Sil',value:'del',cls:'danger'}]:[]), {label:'Vazgeç',value:null}, {label:'Kaydet',value:'ok',cls:'p'}],
+    onOpen: d => {
+      d.classList.add('wide');
+      const form = d.querySelector('#of');
+      let sug = 0, unit = 0, priceAuto = false;
+      const prod = () => (S.products||[]).find(p=>p.id===form.product_id.value);
+      const upd = () => { if (!ed) return;
+        const x = {...Object.fromEntries(new FormData(form)), est_items: ed.rows()}; const c = orderCost({...o, ...x}), q = +x.qty||1;
+        ed.annotate(q, id);
+        sug = Math.ceil(c.total * (1 + (S.settings.margin||0)/100) / 5) * 5;
+        d.querySelector('#oprev').innerHTML = `${c.estimated?'Tahmini maliyet':'Maliyet'} <b>${money(c.total)}</b> · %${S.settings.margin||0} kârla önerilen <b>${money(sug)}</b>` +
+          (+x.price ? ` · kâr <b class="${(+x.price - c.total)>=0?'pos':'neg'}">${money(+x.price - c.total)}</b>` : '');
+        d.querySelector('#osug').classList.toggle('hide', !sug); };
+      ed = itemsEditor(d.querySelector('#oitems'), estItems(o), upd);
+      const p0 = prod(); unit = p0 ? +p0.price||0 : 0; priceAuto = !!p0 && unit && Math.abs((+form.price.value||0) - unit*(+form.qty.value||1)) < 0.01;
+      if (preset?.product_id && unit) { form.price.value = unit * (+form.qty.value||1); priceAuto = true; }
+      form.product_id.onchange = () => { const p = prod(); if (!p) { unit = 0; priceAuto = false; return upd(); }
+        const x = fromProduct(p); form.item.value = x.item||''; form.est_h.value = x.est_h??''; form.labor_h.value = x.labor_h??''; form.extra_cost.value = x.extra_cost??'';
+        unit = +p.price||0; if (unit) { form.price.value = unit * (+form.qty.value||1); priceAuto = true; }
+        ed.set(estItems(x)); };
+      form.qty.addEventListener('input', () => { if (priceAuto && unit) form.price.value = unit * (+form.qty.value||1); });
+      form.price.addEventListener('input', () => { priceAuto = false; });
+      wireImport(d, (p, items) => { if (!form.item.value) form.item.value = p.name; if (p.hours) form.est_h.value = p.hours; ed.set(items); });
+      d.querySelector('#oadd').onclick = () => { ed.addRow({}); upd(); };
+      form.oninput = upd; form.onchange = upd; upd();
+      d.querySelector('#osug').onclick = () => { form.price.value = sug; priceAuto = false; upd(); };
+      d.querySelector('#ocat').onclick = async () => {
+        const x = Object.fromEntries(new FormData(form)), q = +x.qty||1;
+        if (!x.item) { form.item.focus(); return; }
+        const body = {name:x.item, est_items: ed.rows().filter(i=>i.g>0), est_h:x.est_h, labor_h: x.labor_h ? Math.round(+x.labor_h/q*100)/100 : '', extra_cost: x.extra_cost ? Math.round(+x.extra_cost/q*100)/100 : '',
+          price: +x.price ? Math.round(+x.price/q*100)/100 : ''};
+        const pid = form.product_id.value; const j = await post('/api/product', pid ? {id:pid, ...body} : body);
+        form.product_id.innerHTML = prodOpts(j.id); unit = +body.price||0;
+        d.querySelector('.impmsg').innerHTML = `⭐ “${esc(x.item)}” kataloğa ${pid?'güncellendi':'eklendi'}${q>1?' (adet başı değerlerle)':''}.`; };
+      form.customer.focus();
+    }
+  });
+  unwireImport();
+  if (v === 'del') { if (await confirmBox('Sipariş silinsin mi?', 'Bağlı baskı kayıtları silinmez, sadece siparişten ayrılır.')) { await post('/api/order/delete', {id}); toast('Silindi'); } return; }
+  if (v !== 'ok') return;
+  const x = Object.fromEntries(new FormData($('#of')));
+  x.est_items = ed.rows().filter(i=>i.g>0); x.est_g = x.est_items.reduce((a,i)=>a+i.g,0);
+  if (x.status === 'teslim' && o.status !== 'teslim') x.delivered_at = Date.now()/1000;
+  const j = await post('/api/order', {...(id?{id}:{}), ...x}); toast(j.msg || 'Sipariş kaydedildi');
+}
+
+// ===================== Ürün kataloğu =====================
+function productCost(p){ return orderCost({...p, id:'__urun__', qty:1}); }
+function renderProducts(){
+  const P = S.products || [], O = S.orders || [];
+  const q = ($('#uq')?.value||'').toLowerCase();
+  const list = P.filter(p=>`${p.name} ${p.notes||''}`.toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+  $('#products').innerHTML = !P.length ? `<div class="mut">Katalog boş. “+ Yeni ürün” ile ekle ya da bir siparişte “⭐ Kataloğa kaydet”e bas. Sık sattığın ürünü bir kez kaydet; sonra siparişte seçince gram, renk, süre ve fiyat otomatik gelsin.</div>` :
+    list.map(p => { const c = productCost(p), os = O.filter(o=>o.product_id===p.id), sold = os.filter(o=>o.status==='teslim');
+      const pieces = sold.reduce((a,o)=>a+(+o.qty||1),0), prof = sold.reduce((a,o)=>a+orderCost(o).profit,0);
+      return `<div class="oc"><div class="top"><div style="flex:1;min-width:160px"><div class="ttl">${esc(p.name)}</div>${p.notes?`<div class="mut small">${esc(p.notes)}</div>`:''}</div>
+        <span class="small mut">${os.length ? `${os.length} sipariş${pieces?` · ${pieces} adet satıldı · kâr ${money(prof)}`:''}` : 'henüz sipariş yok'}</span></div>
+        <div class="row small" style="flex-wrap:wrap;gap:6px">${estItems(p).map(i=>{const r=refInfo(i.ref);return `<span class="tag" style="display:inline-flex;align-items:center;gap:5px">${r.color?`<i class="sw" style="width:10px;height:10px;border-width:1px;background:${r.color}"></i>`:''}${esc(r.label)} · ${g(i.g)}</span>`}).join('') || '<span class="mut">filament girilmemiş</span>'}</div>
+        <div class="money"><span>Adet maliyeti <b>${money(c.total)}</b></span>${p.est_h?`<span>Süre <b>${hrs(p.est_h)}</b></span>`:''}<span>Fiyat <b>${+p.price?money(+p.price):'—'}</b></span>${+p.price?`<span>Kâr <b class="${+p.price-c.total>=0?'pos':'neg'}">${money(+p.price-c.total)}</b> <span class="mut">(%${Math.round((+p.price-c.total)/(+p.price)*100)})</span></span>`:''}</div>
+        <div class="row" style="gap:6px;justify-content:flex-end"><button class="b mini" onclick="editProduct('${p.id}')">Düzenle</button><button class="b mini p" onclick="editOrder(null,{product_id:'${p.id}'})">+ Sipariş oluştur</button></div></div>`; }).join('');
+}
+async function editProduct(id){
+  const p = (S.products||[]).find(x=>x.id===id) || {};
+  const f = (n, lbl, attrs='') => `<label>${lbl}<input name="${n}" value="${esc(p[n]??'')}" ${attrs}></label>`;
+  let ed, fin;
+  const v = await modal({
+    body: `<h3 style="margin:0 0 12px;font-size:15px">${id?'Ürünü düzenle':'Yeni ürün'}</h3><form class="mform" id="uf" onsubmit="return false">
+      <div class="two">${f('name','Ürün adı','placeholder="ör. Telefon standı" required')}${f('notes','Not','placeholder="ör. 0.2 mm, %15 doluluk"')}</div>
+      ${importBar}
+      <div><div class="mut small" style="margin-bottom:4px">Filament (1 adet için)</div><div id="uitems" style="display:grid;gap:6px"></div><button type="button" class="b mini" id="uadd" style="margin-top:6px">+ Renk ekle</button></div>
+      <div class="three">${f('est_h','Baskı süresi (sa)','type="number" step="0.01"')}${f('labor_h','İşçilik (sa)','type="number" step="0.1"')}${f('extra_cost','Ek masraf (₺)','type="number" step="0.01" placeholder="kutu vb."')}</div>
+      <div class="two">${f('price','Satış fiyatı (₺, adet)','type="number" step="0.01"')}<span></span></div>
+      <div class="preview" style="margin:0"><span class="small" id="uprev"></span><button type="button" class="b mini" id="usug">Öneriyi kullan</button></div>
+    </form>`,
+    buttons: [...(id?[{label:'Sil',value:'del',cls:'danger'}]:[]), {label:'Vazgeç',value:null},
+      {label:'Kaydet', cls:'p', action: () => { const fm = $('#uf'); if (!fm.name.value.trim()) { fm.name.style.borderColor = 'var(--bad)'; fm.name.focus(); return; } fin('ok'); }}],
+    onOpen: (d, finish) => {
+      fin = finish; d.classList.add('wide');
+      const form = d.querySelector('#uf'); let sug = 0;
+      const upd = () => { if (!ed) return; const x = {...Object.fromEntries(new FormData(form)), est_items: ed.rows()}, c = productCost(x);
+        ed.annotate(1, null);
+        sug = Math.ceil(c.total * (1 + (S.settings.margin||0)/100) / 5) * 5;
+        d.querySelector('#uprev').innerHTML = `Adet maliyeti <b>${money(c.total)}</b> <span class="mut">(filament ${money(c.fil)} · elektrik ${money(c.elec)}${c.labor?' · işçilik '+money(c.labor):''})</span> · önerilen <b>${money(sug)}</b>` +
+          (+x.price ? ` · kâr <b class="${+x.price-c.total>=0?'pos':'neg'}">${money(+x.price-c.total)}</b>` : '');
+        d.querySelector('#usug').classList.toggle('hide', !sug); };
+      ed = itemsEditor(d.querySelector('#uitems'), estItems(p), upd);
+      wireImport(d, (pp, items) => { if (!form.name.value) form.name.value = pp.name; if (pp.hours) form.est_h.value = pp.hours; ed.set(items); });
+      d.querySelector('#uadd').onclick = () => { ed.addRow({}); upd(); };
+      d.querySelector('#usug').onclick = () => { form.price.value = sug; upd(); };
+      form.oninput = upd; form.onchange = upd; upd(); form.name.focus();
+    }
+  });
+  unwireImport();
+  if (v === 'del') { if (await confirmBox('Ürün katalogdan silinsin mi?', 'Bu ürünle açılmış siparişler silinmez.')) { await post('/api/product/delete', {id}); toast('Silindi'); } return; }
+  if (v !== 'ok') return;
+  const x = Object.fromEntries(new FormData($('#uf')));
+  x.est_items = ed.rows().filter(i=>i.g>0); x.est_g = x.est_items.reduce((a,i)=>a+i.g,0);
+  await post('/api/product', {...(id?{id}:{}), ...x}); toast('Ürün kaydedildi');
+}
+
+// ===================== Filament alımları =====================
+function purchaseTotal(p){ return (p.items||[]).reduce((a,i)=>a+(+i.qty||0)*(+i.unit_price||0),0) + (+p.shipping||0); }
+function renderPurchases(){
+  const P = S.purchases || [];
+  const m0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1)/1000;
+  $('#pstats').innerHTML = [['Yolda / bekleyen', P.filter(p=>p.status!=='teslim').length],
+    ['Bu ay harcama', money(P.filter(p=>(p.date? new Date(p.date)/1000 : p.created) >= m0).reduce((a,p)=>a+purchaseTotal(p),0))],
+    ['Toplam harcama', money(P.reduce((a,p)=>a+purchaseTotal(p),0))]]
+    .map(([a,b])=>`<div class="stat"><div class="mut small">${a}</div><div class="big">${b}</div></div>`).join('');
+  $('#purchases').innerHTML = P.length ? P.map(p => {
+    const n = (p.items||[]).reduce((a,i)=>a+(+i.qty||0),0);
+    return `<div class="oc"><div class="top"><div style="flex:1;min-width:180px"><div class="ttl">${esc(p.vendor||'Alım')}</div>
+      <div class="mut small">${p.date?fmtDate(p.date):''}${p.tracking?' · takip: '+esc(p.tracking):''}</div></div>${stBadge(p.status, PUR_ST)}</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${(p.items||[]).map(i=>`<span class="tag" style="display:inline-flex;align-items:center;gap:5px"><i class="sw" style="width:10px;height:10px;border-width:1px;background:${i.color||'#888'}"></i>${+i.qty}× ${esc([i.brand,i.material,i.name].filter(Boolean).join(' '))} ${i.weight_g?Math.round(i.weight_g)+'g':''}</span>`).join('')}</div>
+      <div class="row small" style="flex-wrap:wrap;gap:6px"><span class="mut" style="flex:1">${n} makara · toplam <b style="color:var(--ink)">${money(purchaseTotal(p))}</b>${+p.shipping?' (kargo '+money(+p.shipping)+')':''}</span>
+        ${p.status==='liste'?`<button class="b mini" onclick="post('/api/purchase',{id:'${p.id}',status:'siparis'})">🛒 Sipariş verdim</button>`:''}
+        ${p.status==='siparis'?`<button class="b mini" onclick="post('/api/purchase',{id:'${p.id}',status:'kargoda'})">🚚 Kargoya verildi</button>`:''}
+        ${p.status!=='teslim'?`<button class="b mini p" onclick="receive('${p.id}')">📦 Teslim alındı → stoğa ekle</button>`:`<span class="mut">✓ ${(p.received_spools||[]).length} makara stoğa eklendi</span>`}
+        <button class="b mini" onclick="editPurchase('${p.id}')">Düzenle</button></div></div>`; }).join('')
+    : '<div class="mut">Henüz filament alımı yok.</div>';
+}
+async function receive(id){
+  const p = S.purchases.find(x=>x.id===id), n = (p.items||[]).reduce((a,i)=>a+(+i.qty||0),0);
+  if (!n) return toast('Önce alıma ürün satırı ekle');
+  if (await confirmBox('Teslim alındı mı?', `${n} makara, fiyatı ve kargo payıyla birlikte rafa eklenecek.`, 'Stoğa ekle')) {
+    await post('/api/purchase/receive', {id}); toast(n + ' makara stoğa eklendi'); }
+}
+function itemLine(i={}){ return `<div class="irow">
+  <input data-k="brand" placeholder="Marka" value="${esc(i.brand||'')}"><input data-k="material" list="mats" placeholder="PLA" value="${esc(i.material||'PLA')}">
+  <input data-k="name" placeholder="Renk adı" value="${esc(i.name||'')}"><input data-k="color" type="color" value="${i.color||'#222222'}" style="padding:1px;height:30px">
+  <input data-k="weight_g" type="number" placeholder="g" value="${i.weight_g??1000}"><input data-k="qty" type="number" min="1" placeholder="adet" value="${i.qty??1}">
+  <input data-k="unit_price" type="number" step="0.01" placeholder="₺/adet" value="${i.unit_price??''}"><button type="button" class="b mini" onclick="this.parentNode.remove();document.querySelector('#pf2').dispatchEvent(new Event('input'))">✕</button></div>`; }
+async function editPurchase(id){
+  const p = (S.purchases||[]).find(x=>x.id===id) || {date: today(), status:'siparis', items:[{}]};
+  const locked = p.status === 'teslim';
+  const v = await modal({
+    body: `<h3 style="margin:0 0 12px;font-size:15px">${id?'Alımı düzenle':'Yeni filament alımı'}</h3><form class="mform" id="pf2" onsubmit="return false">
+      <div class="three"><label>Satıcı<input name="vendor" value="${esc(p.vendor||'')}" placeholder="ör. Anycubic mağaza, Trendyol"></label>
+      <label>Tarih<input name="date" type="date" value="${p.date||''}"></label>
+      <label>Durum<select name="status" ${locked?'disabled':''}>${Object.entries(PUR_ST).filter(([k])=>locked||k!=='teslim').map(([k,l])=>`<option value="${k}" ${k===p.status?'selected':''}>${l}</option>`).join('')}</select></label></div>
+      <div class="three"><label>Kargo takip no<input name="tracking" value="${esc(p.tracking||'')}"></label><label>Kargo ücreti (₺)<input name="shipping" type="number" step="0.01" value="${p.shipping??''}"></label><label>Not<input name="notes" value="${esc(p.notes||'')}"></label></div>
+      <div class="irow mut small" style="margin-top:4px"><span>Marka</span><span>Malzeme</span><span>Renk adı</span><span></span><span>Ağırlık</span><span>Adet</span><span>Birim ₺</span><span></span></div>
+      <div id="pitems2" style="display:grid;gap:6px">${(p.items||[]).map(itemLine).join('')}</div>
+      <button type="button" class="b mini" style="justify-self:start" onclick="document.querySelector('#pitems2').insertAdjacentHTML('beforeend', itemLine())">+ Satır ekle</button>
+      ${locked?'<div class="mut small">Bu alım stoğa eklendi; ürün satırlarını değiştirmek mevcut makaraları etkilemez.</div>':''}
+      <div class="preview" style="margin:0"><span class="mut small">Toplam</span><b id="ptot"></b></div>
+    </form>`,
+    buttons: [...(id?[{label:'Sil',value:'del',cls:'danger'}]:[]), {label:'Vazgeç',value:null}, {label:'Kaydet',value:'ok',cls:'p'}],
+    onOpen: d => { d.classList.add('wide'); const form = d.querySelector('#pf2');
+      const upd = () => { d.querySelector('#ptot').textContent = money(purchaseTotal({items: readItems(), shipping: form.shipping.value})); };
+      form.oninput = upd; upd(); form.vendor.focus(); }
+  });
+  $('#mdlg').classList.remove('wide');
+  if (v === 'del') { if (await confirmBox('Alım silinsin mi?', 'Stoğa eklenmiş makaralar silinmez.')) { await post('/api/purchase/delete', {id}); toast('Silindi'); } return; }
+  if (v !== 'ok') return;
+  const x = Object.fromEntries(new FormData($('#pf2'))); x.items = readItems();
+  if (locked) delete x.status;
+  await post('/api/purchase', {...(id?{id}:{}), ...x}); toast('Alım kaydedildi');
+}
+function readItems(){ return [...document.querySelectorAll('#pitems2 .irow')].map(r => { const o = {};
+  r.querySelectorAll('[data-k]').forEach(i => o[i.dataset.k] = ['weight_g','qty','unit_price'].includes(i.dataset.k) ? (i.value===''?null:+i.value) : i.value); return o; })
+  .filter(i => i.qty); }
+
+// ===================== Bağlantı ayarları =====================
+document.querySelectorAll('#modes input').forEach(r => r.onchange = () => post('/api/settings', {mode: r.value}));
+async function lanTest(){ const host = $('#lanip').value.trim(); $('#lanMsg').innerHTML = '<span class="mut">Test ediliyor…</span>';
+  try { const r = await post('/api/lan/test', {host}); $('#lanMsg').innerHTML = `<span class="pos">✓ Bulundu: ${esc(r.name||'Anycubic yazıcı')}${r.fw?' · '+esc(r.fw):''} — “Bağlan”a basabilirsin.</span>`; }
+  catch(e){ $('#lanMsg').innerHTML = `<span class="err">${esc(e.message)}</span>`; } }
+async function lanSave(){ const host = $('#lanip').value.trim(); if (!host) return toast('IP adresi gir');
+  await post('/api/settings', {mode:'lan', lan_host: host}); toast('Bağlanılıyor…'); setTimeout(load, 4000); }
+$('#costf').onchange = e => post('/api/settings', {[e.target.name]: +e.target.value});
+$('#oq').oninput = renderOrders;
+
+$('#q').oninput = render;
+async function delHist(ts){
+  const h = S.history.find(x=>x.ts===ts);
+  const v = await modal({body:`<h3 style="margin:0 0 6px;font-size:15px">Kayıt silinsin mi?</h3><div class="mut">${esc(h?.file||'Baskı')} · ${g(h?.grams||0)}<br>Düşülen gramlar makaralara geri eklensin mi?</div>`,
+    buttons:[{label:'Vazgeç',value:null},{label:'Sadece sil',value:'del'},{label:'Sil + gramları geri ekle',value:'restore',cls:'p'}]});
+  if (v) { await post('/api/history/delete', {ts, restore: v==='restore'}); toast('Silindi'); }
+}
+
+function itemRow(sid){ const opts = ordered(S.spools).sort((a,b)=>(!!slotOf(b.id))-(!!slotOf(a.id))).map(s=>`<option value="${s.id}" ${s.id===sid?'selected':''}>${slotOf(s.id)?'[Slot '+(+slotOf(s.id).split(':')[1]+1)+'] ':''}${esc(label(s))} (${Math.round(s.remaining_g)} g)</option>`).join('');
+  return `<div class="row pi"><select style="flex:1;min-width:0">${opts}</select><input type="number" min="0" step="0.1" placeholder="gram" style="width:90px"><button type="button" class="b mini" onclick="this.parentNode.remove()">✕</button></div>`; }
+function addItem(){ $('#pitems').insertAdjacentHTML('beforeend', itemRow()); }
+function logPrint(orderId){
+  if (!S.spools.length) { toast('Önce bir makara ekle'); return editSpool(); }
+  $('#pf').reset();
+  $('#porder').innerHTML = `<option value="">— sipariş yok —</option>` + (S.orders||[]).filter(o=>!['teslim','iptal'].includes(o.status)||o.id===orderId).map(o=>`<option value="${o.id}" ${o.id===orderId?'selected':''}>${esc(o.item||'Sipariş')}${o.customer?' · '+esc(o.customer):''}</option>`).join('');
+  const oo = (S.orders||[]).find(o=>o.id===orderId); if (oo && oo.item) $('#pf').file.value = oo.item;
+  const first = ordered(S.spools).find(s=>slotOf(s.id))?.id || ordered(S.spools)[0].id;
+  $('#pitems').innerHTML = itemRow(first);
+  $('#pdlg').showModal(); $('#pitems input').focus();
+}
+$('#pdlg').addEventListener('close', async () => {
+  if ($('#pdlg').returnValue !== 'ok') return;
+  const items = [...document.querySelectorAll('#pitems .pi')].map(r => ({spool_id: r.querySelector('select').value, grams: +r.querySelector('input').value}));
+  try { await post('/api/print/manual', {file: $('#pf').file.value, items, order_id: $('#pf').order_id.value || null, hours: $('#pf').hours.value}); toast('Kaydedildi, makaradan düşüldü'); } catch(e){}
+});
+function adj(id, d){ post('/api/spool/adjust', {id, delta:d}); }
+
+// --- Uygulama içi pencere (tarayıcı alert/prompt yerine) ---
+function modal({body, buttons, onOpen}){
+  return new Promise(res => {
+    const d = $('#mdlg'); $('#mbody').innerHTML = body;
+    $('#mfoot').innerHTML = buttons.map((b,i)=>`<button type="button" class="b ${b.cls||''}" data-i="${i}">${b.label}</button>`).join('');
+    let done = false; const finish = v => { if (done) return; done = true; d.close(); res(v); };
+    $('#mfoot').onclick = e => { const i = e.target.dataset.i; if (i == null) return; const b = buttons[i]; b.action ? b.action() : finish(b.value); };
+    d.onclose = () => finish(null);
+    d.onclick = e => { if (e.target === d) finish(null); };  // dışarı tıkla = vazgeç
+    d.showModal(); onOpen && onOpen(d, finish);
+  });
+}
+const spoolHead = (s, sub) => `<div class="mhead"><div class="sw" style="background:${s.color||'#888'}"></div><div><h3>${esc(label(s))}</h3><div class="mut small">${sub}</div></div></div>`;
+async function confirmBox(title, text, okLabel='Sil'){
+  return await modal({body:`<h3 style="margin:0 0 6px;font-size:15px">${title}</h3><div class="mut">${text}</div>`,
+    buttons:[{label:'Vazgeç',value:false},{label:okLabel,value:true,cls:'danger'}]});
+}
+
+async function adjAsk(id){
+  const s = S.spools.find(x=>x.id===id); let delta = 0, reset = () => {};
+  const steps = [-100,-50,-25,-10,-5,5,10,25,50,100];
+  const v = await modal({
+    body: spoolHead(s, 'Gram ekle veya çıkar') +
+      `<div class="chips">${steps.map(n=>`<button type="button" class="b ${n<0?'neg':'pos'}" data-n="${n}">${n>0?'+':'−'}${Math.abs(n)}</button>`).join('')}</div>
+       <label class="small mut" style="display:grid;gap:4px;margin-top:8px">ya da miktar yaz (eksi = düş)
+       <input type="number" id="mdelta" step="0.1" placeholder="ör. -37 ya da 120" inputmode="decimal"></label>
+       <div class="preview"><span class="mut small">Yeni kalan</span><span><span class="big" id="mnew">${Math.round(s.remaining_g)}</span> <span class="mut">g</span> <span class="delta" id="md"></span></span></div>`,
+    buttons: [{label:'Vazgeç',value:null},{label:'Sıfırla',action:()=>reset()},{label:'Uygula',value:'ok',cls:'p'}],
+    onOpen: (d, finish) => {
+      const upd = () => { const n = Math.max(0, s.remaining_g + delta);
+        d.querySelector('#mnew').textContent = Math.round(n);
+        const md = d.querySelector('#md'); md.textContent = delta ? (delta>0?'+':'−') + Math.abs(Math.round(delta*10)/10) : '';
+        md.style.color = delta < 0 ? 'var(--bad)' : 'var(--ok)'; };
+      const inp = d.querySelector('#mdelta');
+      d.querySelectorAll('[data-n]').forEach(b => b.onclick = () => { delta += +b.dataset.n; inp.value = delta || ''; upd(); });
+      inp.oninput = () => { delta = +inp.value || 0; upd(); };
+      inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); finish('ok'); } };
+      reset = () => { delta = 0; inp.value = ''; upd(); inp.focus(); };
+      inp.focus();
+    }
+  });
+  if (v === 'ok' && delta) { await adj(id, delta); toast(`${delta>0?'+':'−'}${Math.abs(delta)} g uygulandı`); }
+}
+
+async function weigh(id){
+  const s = S.spools.find(x=>x.id===id);
+  let net = null;
+  const v = await modal({
+    body: spoolHead(s, `Şu an kayıtlı: ${Math.round(s.remaining_g)} g`) +
+      `<div class="two"><label class="small mut" style="display:grid;gap:4px">Tartıdaki ağırlık (g)<input type="number" id="mg" step="1" inputmode="decimal" placeholder="ör. 1050"></label>
+       <label class="small mut" style="display:grid;gap:4px">Boş makara (kasnak) ağırlığı<input type="number" id="mt" step="1" value="${s.tare_g ?? 0}"></label></div>
+       <div class="mut small" style="margin-top:6px">Anycubic karton makara ≈ 150 g, plastik ≈ 200–250 g. Kasnak ağırlığı bu makara için hatırlanır.</div>
+       <div class="preview"><span class="mut small">Net filament</span><span><span class="big" id="mnet">—</span> <span class="mut">g</span></span></div>`,
+    buttons: [{label:'Vazgeç',value:null},{label:'Kaydet',value:'ok',cls:'p'}],
+    onOpen: (d, finish) => {
+      const gI = d.querySelector('#mg'), tI = d.querySelector('#mt');
+      const upd = () => { net = gI.value === '' ? null : Math.max(0, (+gI.value) - (+tI.value || 0));
+        d.querySelector('#mnet').textContent = net == null ? '—' : Math.round(net); };
+      gI.oninput = tI.oninput = upd;
+      [gI,tI].forEach(i => i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); finish('ok'); } });
+      gI.focus();
+    }
+  });
+  if (v === 'ok' && net != null) {
+    await post('/api/spool', {id, remaining_g: net, tare_g: +$('#mt').value || 0});
+    toast('Güncellendi: ' + Math.round(net) + ' g');
+  }
+}
+
+function editSpool(id, preset){
+  const f = $('#sf'), s = S.spools.find(x=>x.id===id) || {};
+  f.reset(); const d = {...{material:'PLA', total_g:1000, color:'#222222'}, ...preset, ...s};
+  for (const k of ['id','brand','material','name','color','total_g','remaining_g','price','notes']) if (f[k]) f[k].value = d[k] ?? '';
+  if (!id) f.remaining_g.value = '';
+  $('#dlgT').textContent = id ? 'Makarayı düzenle' : 'Yeni makara';
+  $('#delBtn').classList.toggle('hide', !id);
+  $('#delBtn').onclick = async () => { $('#dlg').close();
+    if (await confirmBox('Makara silinsin mi?', esc(label(s)) + ' kalıcı olarak silinecek.')) { await post('/api/spool/delete', {id}); toast('Silindi'); } };
+  f.dataset.slot = preset?.slot || '';
+  $('#dlg').showModal();
+}
+$('#dlg').addEventListener('close', async () => {
+  if ($('#dlg').returnValue !== 'ok') return;
+  const f = $('#sf'), o = Object.fromEntries(new FormData(f));
+  if (o.remaining_g === '') { if (o.id) delete o.remaining_g; else o.remaining_g = o.total_g; }
+  if (!o.id) delete o.id;
+  const r = await post('/api/spool', o);
+  if (f.dataset.slot) await post('/api/assign', {slot:f.dataset.slot, spool_id:r.id});
+  toast('Kaydedildi');
+});
+function newFromSlot(key){ const sl = S.live?.slots?.find(s=>s.key===key) || {};
+  editSpool(null, {material: sl.material || 'PLA', color: sl.color || '#222222', slot: key}); }
+
+async function detect(){ try { await post('/api/token/detect'); toast(S.cloud_error ? 'Token bulundu ama hata: '+S.cloud_error : 'Bağlandı ✓'); } catch(e){} }
+async function saveTok(){ const t = $('#tok').value.trim(); if (!t) return; await post('/api/token', {token:t}); $('#tok').value=''; toast(S.cloud_error ? 'Hata: '+S.cloud_error : 'Bağlandı ✓'); }
+
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>
