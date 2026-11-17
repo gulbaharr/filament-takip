@@ -1,14 +1,14 @@
 # Filament Takip
 
-Anycubic Kobra S1 + ACE Pro için filament stoğu, baskı maliyeti ve müşteri siparişi takibi.
+Anycubic Kobra S1 + ACE Pro ve Bambu Lab (AMS) için filament stoğu, baskı maliyeti ve müşteri siparişi takibi.
 Mac'te yerel çalışır; tarayıcıda `http://127.0.0.1:8765` olarak açılır. Python 3 dışında hiçbir şey kurmak gerekmez
 (sadece standart kütüphane, harici paket yok).
 
 ## Neler yapar
 
 **Makaralar ve stok**
-- ACE Pro'daki 4 yuva ve raftaki makaralar ayrı gösterilir; makaraların sırası sabit kalır.
-- Baskı ilerledikçe takılı yuvadaki makaradan gram otomatik düşer (Anycubic Cloud ya da LAN bağlantısıyla).
+- ACE Pro / AMS yuvaları ve raftaki makaralar ayrı gösterilir; makaraların sırası sabit kalır.
+- Baskı ilerledikçe takılı yuvadaki makaradan gram otomatik düşer (Anycubic Cloud, Anycubic LAN ya da Bambu Lab LAN).
 - Bağlantı olmadan da kullanılabilir: "✓ Baskı ekle" ile elle kayıt.
 - Azalan makaralar için uyarı, renk / malzeme bazında gram fiyatı tablosu.
 
@@ -53,9 +53,14 @@ Kurmadan denemek için: `python3 server.py` (port değiştirmek için `FILAMENT_
 |---|---|---|
 | **Anycubic Cloud** | cloud-universe.anycubic.com'a Chrome / Brave / Edge / Arc ile giriş yap → Ayarlar → "Tarayıcıdan otomatik bul". Ya da tarayıcı konsolunda `copy(localStorage['XX-Token'])` ile alıp yapıştır. | Token yaklaşık 90 gün geçerli. |
 | **LAN (yerel ağ)** | Yazıcıda LAN modunu aç → Ayarlar → yazıcının IP adresini gir → "Test et" → "Bağlan". | Sadece Kobra S1 için yazıldı; internet gerekmez. |
+| **Bambu Lab** | Ayarlar → 🟩 Bambu Lab → IP, seri numarası ve erişim kodu (yazıcı ekranı: Ayarlar → WLAN / Cihaz) → "Test et" → "Bağlan". | X1 / P1 / A1 / H2. Yeni firmware'lerde LAN Only + Developer Mode gerekebilir. |
 
-Anycubic kalan filament miktarını vermez. Gram şöyle hesaplanır: baskıda kullanılan uzunluk (mm)
-ya da ilerleme × tahmini uzunluk → `uzunluk × π × 0,875² × yoğunluk` → takılı yuvadaki makaradan düşülür.
+Gram şöyle hesaplanır:
+- **Anycubic:** baskıda kullanılan uzunluk (mm) ya da ilerleme × tahmini uzunluk → `uzunluk × π × 0,875² × yoğunluk`.
+- **Bambu:** baskı başlayınca yazıcıdaki `.gcode.3mf` FTPS ile okunur, `slice_info` içindeki toplam gram × ilerleme.
+
+Her iki durumda da gram, o anda takılı (AMS / ACE'den beslenen) yuvadaki makaradan düşülür. Yazıcı kısa süre
+"boşta" görünürse baskı bitmiş sayılmaz (3 dakika beklenir); iptal edilen baskıda sadece basılan kısım düşer.
 
 ## Hangi yazıcı ve slicer'larla çalışır?
 
@@ -63,7 +68,8 @@ ya da ilerleme × tahmini uzunluk → `uzunluk × π × 0,875² × yoğunluk` �
 |---|---|
 | Anycubic Kobra S1 + ACE Pro | ✅ Canlı takip (Cloud ve LAN) |
 | Diğer Anycubic yazıcılar (Cloud) | ⚠️ Büyük ihtimalle çalışır, denenmedi |
-| Bambu Lab, Prusa, Creality vb. | ❌ Canlı takip yok; elle kayıt ve dosya içe aktarma çalışır |
+| Bambu Lab X1 / P1 / A1 / H2 (+ AMS) | ✅ Canlı takip (yerel ağ); sahte yazıcıyla test edildi, gerçek cihazda denenmedi |
+| Prusa, Creality vb. | ❌ Canlı takip yok; elle kayıt ve dosya içe aktarma çalışır |
 | Anycubic Slicer Next, Bambu Studio, OrcaSlicer G-code / `.gcode.3mf` | ✅ Gram, renk, süre okunur |
 | PrusaSlicer G-code | ⚠️ Aynı satır biçimini kullanıyor, çalışması beklenir; denenmedi |
 | Cura G-code | ❌ Gram yazmıyor (sadece metre), okunamaz |
@@ -81,6 +87,7 @@ ya da ilerleme × tahmini uzunluk → `uzunluk × π × 0,875² × yoğunluk` �
 | Dosya | Görevi |
 |---|---|
 | `server.py` | HTTP sunucusu, veri, Anycubic Cloud, baskı takibi, maliyet / rezervasyon |
+| `bambu.py` | Bambu Lab yerel ağ bağlantısı (MQTT 8883 + FTPS 990) |
 | `lan.py` | Kobra S1 LAN bağlantısı (MQTT); protokol [chrisfore/anycubic_ha_local](https://github.com/chrisfore/anycubic_ha_local) belgelerine dayanır |
 | `slicer.py` | G-code / 3mf okuma, Anycubic Slicer Next ile arka planda dilimleme |
 | `index.html` | Arayüzün tamamı (tek sayfa) |

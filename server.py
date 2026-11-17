@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lan as lanmod  # noqa: E402
+import bambu as bambumod  # noqa: E402
 import slicer as slicermod  # noqa: E402
 
 HOST, PORT = "127.0.0.1", int(os.environ.get("FILAMENT_PORT", "8765"))
@@ -33,6 +34,7 @@ APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path.home() / "Library" / "Application Support" / "FilamentTakip"
 DATA_FILE = DATA_DIR / "data.json"
 POLL_IDLE, POLL_PRINTING = 60, 20  # saniye
+IDLE_GRACE = 180  # sn; yazıcı kısa süre "boşta" görünürse baskıyı bitmiş sayma
 
 # --- Anycubic Cloud (web istemcisinin imza parametreleri) -------------------
 API = "https://cloud-universe.anycubic.com/p/p/workbench/api"
@@ -55,7 +57,7 @@ def default_state() -> dict:
     return {"token": "", "printer_id": None, "spools": [], "history": [],
             "slot_map": {}, "track": None, "live": None, "log": [],
             "orders": [], "purchases": [], "products": [],
-            "settings": {"low_g": 150, "auto_deduct": True, "mode": "manual", "lan_host": "",
+            "settings": {"low_g": 150, "auto_deduct": True, "mode": "manual", "lan_host": "", "bambu_host": "", "bambu_serial": "", "bambu_code": "",
                          "kwh_price": 3.0, "printer_watt": 150, "labor_hour": 0, "margin": 30, "default_kg": 0, "order_deduct": True,
                          "currency": "₺"}}
 
@@ -153,6 +155,12 @@ def _spool_order(cands):
     return sorted(cands, key=lambda s: (s["id"] not in loaded, s.get("remaining_g") or 0, s.get("created") or 0))
 
 
+def spool_label(sp: dict | None) -> str:
+    if not sp:
+        return "makara"
+    return sp.get("name") or " ".join(x for x in (sp.get("brand"), sp.get("material"), sp.get("color")) if x) or "makara"
+
+
 def reserve_order(o: dict) -> str | None:
     if reserve_entry(o["id"]):
         return None
@@ -171,20 +179,31 @@ def reserve_order(o: dict) -> str | None:
                 k = grp_key(sp) if sp else "?"
                 printed[k] = printed.get(k, 0) + gr
     per, short, used_any = {}, 0.0, False
+    needs = []
     for it in items:
         ref, need = str(it.get("ref") or ""), float(it["g"]) * q
         if ref.startswith("g:"):
-            keys = [ref[2:]]
+            keys, mat = [ref[2:]], ref[2:].split("|")[0]
             cands = [s for s in STATE["spools"] if grp_key(s) == ref[2:]]
         elif ref.startswith("m:"):
-            keys = [k for k in printed if k.split("|")[0] == ref[2:]]
-            cands = [s for s in STATE["spools"] if mat_of(s) == ref[2:]]
+            mat = ref[2:]
+            keys = [k for k in printed if k.split("|")[0] == mat]
+            cands = [s for s in STATE["spools"] if mat_of(s) == mat]
         else:
-            keys, cands = list(printed), [s for s in STATE["spools"] if s["id"] in STATE["slot_map"].values()] or STATE["spools"]
+            keys, mat = list(printed), None
+            cands = [s for s in STATE["spools"] if s["id"] in STATE["slot_map"].values()] or STATE["spools"]
         for k in keys:
             t = min(need, printed.get(k, 0))
             printed[k] = printed.get(k, 0) - t
             need -= t
+        needs.append([need, mat, cands])
+    # Baskı tahminden farklı renk dağılımıyla harcadıysa artan gram diğer kalemleri karşılar (önce aynı malzeme).
+    for n in needs:
+        for k in sorted(printed, key=lambda k: k.split("|")[0] != n[1]):
+            t = min(n[0], printed[k])
+            printed[k] -= t
+            n[0] -= t
+    for need, _mat, cands in needs:
         for sp in _spool_order([s for s in cands if (s.get("remaining_g") or 0) > 0]):
             if need <= 0.05:
                 break
@@ -203,7 +222,7 @@ def reserve_order(o: dict) -> str | None:
         "ts": now, "start": now, "file": f"{o.get('item') or 'Sipariş'} (tahmini)", "task_id": None, "kind": "reserve",
         "grams": grams, "orig_grams": grams, "per_spool": {k: round(v, 1) for k, v in per.items()},
         "progress": None, "hours": hrs, "est_hours": hrs, "order_id": o["id"], "short": round(short, 1)}))
-    names = ", ".join(f"{(spool_by_id(k) or {}).get('name') or 'makara'} {v:.0f} g" for k, v in per.items())
+    names = ", ".join(f"{spool_label(spool_by_id(k))} {v:.0f} g" for k, v in per.items())
     log(f"Sipariş basılıyor: {o.get('item') or '—'} · stoktan düşüldü: {names}")
     return f"Stoktan düşüldü: {names}" + (f" · {short:.0f} g stok yetmedi" if short > 0.5 else "")
 
@@ -337,17 +356,22 @@ def _deduct(t: dict, live: dict, new_progress) -> None:
     if new_progress is None:
         return
     total_mm = (live.get("est_m") or t.get("est_m") or 0) * 1000.0 or (live.get("used_mm") or 0)
-    dp = max(0, new_progress - (t.get("progress") or 0))
-    t["progress"] = max(new_progress, t.get("progress") or 0)
+    total_g = live.get("est_g") or t.get("est_g") or 0
     if live.get("est_m"):
         t["est_m"] = live["est_m"]
-    if not (total_mm and dp):
+    if live.get("est_g"):
+        t["est_g"] = live["est_g"]
+    if not (total_mm or total_g):
+        return  # toplam henüz bilinmiyor: ilerlemeyi bekletiyoruz, öğrenilince birikmiş kısım düşer
+    dp = max(0, new_progress - (t.get("progress") or 0))
+    t["progress"] = max(new_progress, t.get("progress") or 0)
+    if not dp:
         return
     slot = live.get("loaded")
     sid = STATE["slot_map"].get(slot) if slot else None
     sp = spool_by_id(sid) if sid else None
     mat = sp["material"] if sp else next((s["material"] for s in live.get("slots", []) if s["key"] == slot), "PLA")
-    g = grams_from_mm(dp / 100.0 * total_mm, mat)
+    g = dp / 100.0 * total_g if total_g else grams_from_mm(dp / 100.0 * total_mm, mat)
     t["grams"] += g
     k = sid or f"slot:{slot}"
     t["per_spool"][k] = t["per_spool"].get(k, 0) + g
@@ -361,9 +385,11 @@ def track(live: dict) -> None:
     """Baskı ilerledikçe takılı slottaki makaradan gram düş."""
     t = STATE.get("track")
     if live["printing"] and live["task_id"]:
-        if t and t.get("task_id") != live["task_id"]:
+        if t and (t.get("task_id") != live["task_id"] or (live.get("file") and t.get("file") != live["file"])):
             _finish(t)
             t = None
+        if t:
+            t.pop("idle_since", None)
         if not t:
             # Baskının ortasında fark edilse bile 0'dan say: harcanan filament gerçekten harcandı.
             t = STATE["track"] = {"task_id": live["task_id"], "file": live["file"], "start": time.time(),
@@ -375,7 +401,9 @@ def track(live: dict) -> None:
         # Yazıcı "bitti" diyorsa kalan kısmı da düş; iptalde olduğu yerde kalır.
         if live.get("state") == "finished" or (live.get("progress") or 0) >= 100:
             _deduct(t, live, 100)
-        _finish(t)
+            _finish(t)
+        elif time.time() - t.setdefault("idle_since", time.time()) > IDLE_GRACE:
+            _finish(t)  # durum bir süre "boşta" kaldı: iptal / hata
 
 
 def _finish(t: dict) -> None:
@@ -424,17 +452,41 @@ def ensure_lan():
         LAN.start()
 
 
+BAMBU = None
+
+
+def ensure_bambu():
+    global BAMBU
+    st = STATE["settings"]
+    want = (st.get("bambu_host"), st.get("bambu_serial"), st.get("bambu_code")) if st.get("mode") == "bambu" else None
+    if want and not all(want):
+        want = None
+    if BAMBU and (not want or (BAMBU.host, BAMBU.serial, BAMBU.code) != want):
+        BAMBU.stop()
+        BAMBU = None
+    if want and not BAMBU:
+        BAMBU = bambumod.BambuClient(*want, on_update=wake.set, log=log)
+        BAMBU.start()
+
+
+def local_client():
+    mode = STATE["settings"].get("mode")
+    return LAN if mode == "lan" else BAMBU if mode == "bambu" else None
+
+
 def poller() -> None:
     while True:
         interval = POLL_IDLE
         ensure_lan()
+        ensure_bambu()
         mode = STATE["settings"].get("mode")
-        if mode == "lan":
+        if mode in ("lan", "bambu"):
             interval = 10
-            live = LAN.live() if LAN else None
+            cl = local_client()
+            live = cl.live() if cl else None
             with lock:
                 if live:
-                    STATE["live"], STATE["raw"] = live, LAN.raw
+                    STATE["live"], STATE["raw"] = live, cl.raw
                     track(live)
                     save()
         elif mode == "cloud" and STATE.get("token"):
@@ -484,7 +536,9 @@ def public_state() -> dict:
     with lock:
         s = {k: v for k, v in STATE.items() if k not in ("token", "raw")}
         s["has_token"] = bool(STATE.get("token"))
-        s["lan_status"] = {"connected": bool(LAN and LAN.connected), "error": LAN.error if LAN else None}
+        cl = local_client()
+        s["lan_status"] = {"connected": bool(cl and cl.connected), "error": cl.error if cl else None}
+        s["settings"] = {**STATE["settings"], "bambu_code": "", "bambu_has_code": bool(STATE["settings"].get("bambu_code"))}
         s["token_hint"] = (STATE["token"][:6] + "…" + STATE["token"][-4:]) if STATE.get("token") else ""
         return json.loads(json.dumps(s))
 
@@ -687,13 +741,37 @@ class H(BaseHTTPRequestHandler):
                 except lanmod.LanError as e:
                     raise ValueError(str(e)) from e
                 return {"ok": True, "name": info.get("modelName") or info.get("deviceName"), "fw": info.get("version")}
+            elif path == "/api/bambu/test":
+                st = STATE["settings"]
+                host = str(d.get("host") or "").strip()
+                serial = str(d.get("serial") or "").strip().upper()
+                code = str(d.get("code") or "").strip() or st.get("bambu_code") or ""
+                if not re.fullmatch(r"[A-Za-z0-9.-]+", host):
+                    raise ValueError("Geçerli bir IP adresi gir")
+                if not re.fullmatch(r"[A-Z0-9]{8,20}", serial):
+                    raise ValueError("Seri numarasını kontrol et (yazıcı ekranında Ayarlar → Cihaz)")
+                if not code:
+                    raise ValueError("Erişim kodunu gir")
+                lock.release()  # ağ beklerken diğer istekleri kilitleme
+                try:
+                    info = bambumod.probe(host, serial, code)
+                except bambumod.BambuError as e:
+                    raise ValueError(str(e)) from e
+                finally:
+                    lock.acquire()
+                return {"ok": True, **info}
             elif path == "/api/printer":
                 STATE["printer_id"] = d.get("id")
                 save()
             elif path == "/api/settings":
+                if "bambu_code" in d and not str(d["bambu_code"] or "").strip():
+                    d.pop("bambu_code")  # boş gönderildiyse kayıtlı kodu koru
+                if "bambu_serial" in d:
+                    d["bambu_serial"] = str(d["bambu_serial"] or "").strip().upper()
                 STATE["settings"].update({k: d[k] for k in ("low_g", "auto_deduct", "mode", "lan_host", "kwh_price",
+                                                            "bambu_host", "bambu_serial", "bambu_code",
                                                             "printer_watt", "labor_hour", "margin", "currency", "default_kg", "order_deduct") if k in d})
-                if "mode" in d or "lan_host" in d:
+                if any(k in d for k in ("mode", "lan_host", "bambu_host", "bambu_serial", "bambu_code")):
                     STATE["live"] = None
                 save()
                 wake.set()

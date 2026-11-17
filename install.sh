@@ -34,7 +34,7 @@ SH
   chmod +x "$APP/Contents/MacOS/FilamentTakip"
 fi
 
-cp "$SRC"/{server.py,lan.py,slicer.py,index.html} "$APP/Contents/Resources/"
+cp "$SRC"/{server.py,lan.py,bambu.py,slicer.py,index.html} "$APP/Contents/Resources/"
 pkill -f "Filament Takip.app/Contents/Resources/server.py" || true
 sleep 1
 open "$APP"

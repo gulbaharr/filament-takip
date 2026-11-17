@@ -88,7 +88,7 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
 .irow{display:grid;grid-template-columns:1.1fr .8fr 1fr 40px .8fr .55fr .9fr 28px;gap:6px;align-items:center}
 .irow input{min-width:0;padding:5px 6px}
 #mdlg.wide{width:min(760px,96vw)}
-.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
 .modes label{border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;display:grid;gap:2px}
 .modes label:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
 .modes input{display:none}
@@ -135,7 +135,7 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
     <div class="card hide" id="cloudErr"></div>
     <div class="stats" id="stats" style="margin-bottom:16px"></div>
     <div class="card hide" id="printCard"></div>
-    <div class="card ace" id="slotCard"><h2>🎛️ ACE Pro slotları <span class="mut small" id="slotUpd"></span></h2><div class="slots" id="slots"></div>
+    <div class="card ace" id="slotCard"><h2>🎛️ <span class="boxname">ACE Pro</span> slotları <span class="mut small" id="slotUpd"></span></h2><div class="slots" id="slots"></div>
       <p class="mut small" style="margin:10px 0 0" id="slotHelp"></p></div>
     <div class="card shelf"><h2>📦 Raftaki makaralar <span class="tag" id="shelfN"></span></h2><div class="grid" id="panoSpools"></div></div>
     <div class="card"><h2>Yaklaşan siparişler <span class="mut small" style="margin-left:auto;font-weight:400"><a href="#" onclick="tab('sip');return false">tümü →</a></span></h2><div id="panoOrders" class="olist"></div></div>
@@ -168,7 +168,7 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
   <!-- STOK -->
   <section id="t-stok" class="hide">
     <div class="row" style="margin-bottom:12px"><input id="q" placeholder="Ara (marka, renk, malzeme)…" style="flex:1"><button class="b p" onclick="editSpool()">+ Makara ekle</button></div>
-    <div class="card ace"><h2>🎛️ ACE Pro'da takılı</h2><div class="slots" id="slots2"></div></div>
+    <div class="card ace"><h2>🎛️ <span class="boxname">ACE Pro</span> — takılı</h2><div class="slots" id="slots2"></div></div>
     <div class="card shelf"><h2>📦 Rafta <span class="tag" id="shelfN2"></span></h2><div class="grid" id="spools"></div></div>
     <div class="card"><h2>💰 Renk / malzeme fiyatları</h2><div id="ptab"></div>
       <p class="mut small">Siparişte bir renk seçince maliyet o rengin ₺/g fiyatıyla hesaplanır. Fiyatı olmayan makaralar için önce aynı renk, sonra aynı malzeme ortalaması, o da yoksa Ayarlar'daki varsayılan ₺/kg kullanılır.</p></div>
@@ -188,6 +188,7 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
         <label><input type="radio" name="mode" value="manual"><b>✍️ Elle</b><span class="mut small">Bağlantı yok, baskıları sen kaydedersin</span></label>
         <label><input type="radio" name="mode" value="cloud"><b>☁️ Anycubic Cloud</b><span class="mut small">Hesapla bağlan; uygulama/bulut çalışmaya devam eder</span></label>
         <label><input type="radio" name="mode" value="lan"><b>📡 Yerel ağ (IP)</b><span class="mut small">Kobra S1'e doğrudan bağlan, internet gerekmez</span></label>
+        <label><input type="radio" name="mode" value="bambu"><b>🟩 Bambu Lab</b><span class="mut small">X1 / P1 / A1 / H2 — yerel ağdan, erişim koduyla</span></label>
       </div>
     </div>
     <div class="card hide" id="lanCard">
@@ -196,6 +197,19 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
       <div class="row" style="margin-top:12px;flex-wrap:wrap"><input id="lanip" placeholder="Yazıcının IP adresi (ör. 192.168.1.42)" style="flex:1;min-width:200px"><button class="b" onclick="lanTest()">Test et</button><button class="b p" onclick="lanSave()">Bağlan</button></div>
       <p class="mut small">IP adresini yazıcı ekranında <b>Ayarlar → Ağ</b> bölümünde ya da modeminin bağlı cihazlar listesinde bulabilirsin.</p>
       <div id="lanMsg" class="small"></div>
+    </div>
+    <div class="card hide" id="bambuCard">
+      <h2>🟩 Bambu Lab bağlantısı <span id="bbState" class="tag"></span></h2>
+      <div class="warnbox">Yazıcı ekranında <b>Ayarlar → WLAN / Ağ</b> bölümünden <b>IP adresini</b> ve <b>erişim kodunu</b> (Access Code), <b>Ayarlar → Cihaz</b>'dan <b>seri numarasını</b> al.
+        Yeni firmware'lerde bağlantı için <b>LAN Only Mode</b> ve <b>Developer Mode</b>'u açman gerekebilir; o modda Bambu Handy ve bulut çalışmaz (Bambu Studio'dan yerel ağla göndermeye devam edersin).</div>
+      <form id="bbf" onsubmit="return false" class="mform" style="margin-top:12px">
+        <div class="three"><label>IP adresi<input name="host" placeholder="ör. 192.168.1.50"></label>
+          <label>Seri numarası<input name="serial" placeholder="ör. 01P00A123456789" autocapitalize="characters"></label>
+          <label>Erişim kodu<input name="code" type="password" autocomplete="off" placeholder="8 haneli kod"></label></div>
+        <div class="row" style="gap:8px"><button class="b" type="button" onclick="bambuTest()">Test et</button><button class="b p" type="button" onclick="bambuSave()">Bağlan</button></div>
+      </form>
+      <p class="mut small">Gram, baskı başlayınca yazıcıdaki dosyadan (slice bilgisi) okunur ve baskı ilerledikçe o anda AMS'ten beslenen makaradan düşülür. AMS yuvalarına makaralarını Pano'dan atayabilirsin.</p>
+      <div id="bbMsg" class="small"></div>
     </div>
     <div class="card hide" id="cloudCard">
       <h2>☁️ Anycubic Cloud bağlantısı <span id="tokState" class="tag"></span></h2>
@@ -293,14 +307,15 @@ function slotOf(id){ return Object.entries(S.slot_map).find(([k,v])=>v===id)?.[0
 function render(){
   PLAN = stockPlan();
   const mode = S.settings.mode || 'manual', L = mode === 'manual' ? null : S.live;
-  const err = mode === 'cloud' ? S.cloud_error : mode === 'lan' && !S.lan_status?.connected ? S.lan_status?.error : null;
-  const linked = mode === 'cloud' ? S.has_token : mode === 'lan' ? !!S.lan_status?.connected : false;
+  const local = mode === 'lan' || mode === 'bambu';
+  const err = mode === 'cloud' ? S.cloud_error : local && !S.lan_status?.connected ? S.lan_status?.error : null;
+  const linked = mode === 'cloud' ? S.has_token : local ? !!S.lan_status?.connected : false;
   $('#dot').className = 'dot ' + (mode === 'manual' ? '' : err ? 'err' : linked ? 'on' : '');
-  $('#hdr').textContent = L ? `${L.name || 'Yazıcı'} · ${L.printing ? 'basıyor' : 'boşta'}${mode==='lan'?' · yerel ağ':''}` : mode === 'manual' ? 'elle mod' : 'bağlanıyor…';
+  $('#hdr').textContent = L ? `${L.name || 'Yazıcı'} · ${L.printing ? 'basıyor' : 'boşta'}${local?' · yerel ağ':''}` : mode === 'manual' ? 'elle mod' : 'bağlanıyor…';
   $('#nocloud').classList.toggle('hide', mode !== 'manual');
   $('#welcome').classList.toggle('hide', S.spools.length > 0);
   $('#cloudErr').classList.toggle('hide', !err);
-  if (err) $('#cloudErr').innerHTML = `<h2 class="err">${mode==='lan'?'Yazıcıya yerel ağdan bağlanılamıyor':'Anycubic bağlantı sorunu'}</h2><div class="mut">${esc(err)}${mode==='cloud'&&/token|401|403|login|expire|Illegal/i.test(err)?' — token süresi dolmuş olabilir, Ayarlar\'dan yenile.':''}${mode==='lan'?' — yazıcı açık mı, LAN Modu açık mı, IP doğru mu? 20 sn\'de bir tekrar deneniyor.':''}</div>`;
+  if (err) $('#cloudErr').innerHTML = `<h2 class="err">${local?'Yazıcıya yerel ağdan bağlanılamıyor':'Anycubic bağlantı sorunu'}</h2><div class="mut">${esc(err)}${mode==='cloud'&&/token|401|403|login|expire|Illegal/i.test(err)?' — token süresi dolmuş olabilir, Ayarlar\'dan yenile.':''}${mode==='lan'?' — yazıcı açık mı, LAN Modu açık mı, IP doğru mu? 20 sn\'de bir tekrar deneniyor.':''}${mode==='bambu'?' — yazıcı açık mı, IP / seri no / erişim kodu doğru mu, LAN Only + Developer Mode açık mı? 20 sn\'de bir tekrar deneniyor.':''}</div>`;
 
   // istatistik
   const tot = S.spools.reduce((a,s)=>a+(s.remaining_g||0),0);
@@ -321,7 +336,8 @@ function render(){
     $('#printCard').innerHTML = `<h2>Şu an basılıyor <span class="tag acc">${p}%</span></h2>
       <div class="row" style="justify-content:space-between"><b>${esc(L.file||'—')}</b><span class="mut small">${L.remain_min!=null? L.remain_min+' dk kaldı':''}</span></div>
       <div class="prog" style="margin:10px 0"><i style="width:${p}%"></i></div>
-      <div class="mut small">Bu baskıda harcanan: <b style="color:var(--ink)">${g(T?.grams||0)}</b>${L.est_m?` · tahmini toplam ${(L.est_m).toFixed(1)} m`:''}</div>
+      <div class="mut small">Bu baskıda harcanan: <b style="color:var(--ink)">${g(T?.grams||0)}</b>${L.est_m?` · tahmini toplam ${(L.est_m).toFixed(1)} m`:''}${L.est_g?` · tahmini toplam ${g(L.est_g)}`:''}</div>
+      ${L.source==='bambu'&&!L.est_g?`<div class="small ${L.job_error?'err':'mut'}" style="margin-top:4px">${L.job_error?'⚠️ Gram bilgisi okunamadı: '+esc(L.job_error)+' — baskı bitince geçmişten elle düzelt.':'Gram bilgisi yazıcıdaki dosyadan okunuyor…'}</div>`:''}
       ${T?`<div class="row small" style="margin-top:8px"><span class="mut">Bu baskı hangi sipariş için?</span><select style="flex:1" onchange="post('/api/track/order',{order_id:this.value||null})"><option value="">— sipariş yok —</option>${(S.orders||[]).filter(o=>!['teslim','iptal'].includes(o.status)||o.id===T.order_id).map(o=>`<option value="${o.id}" ${o.id===T.order_id?'selected':''}>${esc(o.item||'Sipariş')} · ${esc(o.customer||'')}</option>`).join('')}</select></div>`:''}`;
   }
 
@@ -337,7 +353,7 @@ function render(){
     const html = slots.map(sl => {
       const sid = S.slot_map[sl.key], sp = S.spools.find(s=>s.id===sid), ld = cloud && L.loaded===sl.key;
       const head = `<div class="row"><div class="sw" style="background:${sp?(sp.color||'#888'):sl.empty?'transparent':(sl.color||'#888')};${!sp&&sl.empty?'border-style:dashed':''}"></div>
-        <div style="min-width:0;flex:1"><b>Slot ${sl.index+1}</b> ${ld?'<span class="tag acc">takılı</span>':''}<div class="mut small">${sp?esc(label(sp)):sl.empty?'boş':esc(sl.material)+' · makara atanmadı'}</div></div></div>`;
+        <div style="min-width:0;flex:1"><b>${slotName(sl.key)}</b> ${ld?'<span class="tag acc">takılı</span>':''}<div class="mut small">${sp?esc(label(sp)):sl.empty?'boş':esc(sl.material)+' · makara atanmadı'}</div></div></div>`;
       if (sp) return `<div class="slot ${ld?'loaded':''}">${head}
         <div class="bar ${barCls(sp)}"><i style="width:${pct(sp)}%"></i></div>
         <div class="row" style="justify-content:space-between"><span><span class="big" style="font-size:18px">${Math.round(sp.remaining_g)}</span> <span class="mut">/ ${Math.round(sp.total_g)} g</span></span></div>
@@ -347,6 +363,7 @@ function render(){
         <select style="margin-top:10px;width:100%" onchange="this.value && post('/api/assign',{slot:'${sl.key}',spool_id:this.value})"><option value="">${sh.length?'— raftan makara tak —':'rafta makara yok'}</option>${sh.map(s=>`<option value="${s.id}">${esc(label(s))} (${Math.round(s.remaining_g)} g)</option>`).join('')}</select>
         <button class="b mini" style="margin-top:6px" onclick="newFromSlot('${sl.key}')">+ Yeni makara tak</button></div>`; }).join('');
     $('#slots').innerHTML = html; $('#slots2').innerHTML = html;
+    document.querySelectorAll('.boxname').forEach(e => e.textContent = L?.source === 'bambu' ? 'AMS' : 'ACE Pro');
   }
 
   // azalanlar
@@ -365,15 +382,18 @@ function render(){
   renderHist(); renderOrders(); renderPurchases(); renderPriceTable(); renderProducts(); renderPlan();
 }
 function ctrls(id){ return `<button class="b mini" onclick="adj('${id}',-10)">−10</button><button class="b mini" onclick="adjAsk('${id}')">±</button><button class="b mini" onclick="weigh('${id}')">Tart</button><button class="b mini" onclick="editSpool('${id}')">✎</button>`; }
+function slotName(k){ if (k === 'ext') return 'Harici makara';
+  const [b, i] = String(k).split(':').map(Number), multi = (S.live?.slots||[]).some(x=>x.box > 0);
+  return multi ? `AMS ${b+1} · ${i+1}` : `Slot ${i+1}`; }
 function aceSlotKeys(){ return S.live?.slots?.length ? S.live.slots.map(x=>x.key) : ['0:0','0:1','0:2','0:3']; }
 function spoolCard(s){ const sl = slotOf(s.id);
     return `<div class="spool"><div class="row"><div class="sw" style="background:${s.color||'#888'}"></div>
-      <div style="min-width:0;flex:1"><b>${esc(s.name||s.material)}</b>${sl?` <span class="tag acc">Slot ${+sl.split(':')[1]+1}</span>`:''}<div class="mut small">${esc([s.brand,s.material].filter(Boolean).join(' · '))}</div></div>
+      <div style="min-width:0;flex:1"><b>${esc(s.name||s.material)}</b>${sl?` <span class="tag acc">${slotName(sl)}</span>`:''}<div class="mut small">${esc([s.brand,s.material].filter(Boolean).join(' · '))}</div></div>
 </div>
       <div class="bar ${barCls(s)}"><i style="width:${pct(s)}%"></i></div>
       <div class="row" style="justify-content:space-between"><span><span class="big" style="font-size:18px">${Math.round(s.remaining_g)}</span> <span class="mut">/ ${Math.round(s.total_g)} g</span></span><span class="small ${ownGP(s)?'mut':'err'}" title="${ownGP(s)?'':'Fiyat girilmemiş — ✎ ile ekle'}">${ownGP(s)?kg(ownGP(s)):'fiyat yok'}</span></div>
       <div class="row" style="gap:4px;margin-top:8px;flex-wrap:wrap">${ctrls(s.id)}</div>
-      <select style="margin-top:8px;width:100%" onchange="this.value && post('/api/assign',{slot:this.value,spool_id:'${s.id}'})"><option value="">🎛️ ACE'ye tak…</option>${aceSlotKeys().map(k=>{const o=S.spools.find(x=>x.id===S.slot_map[k]);return `<option value="${k}">Slot ${+k.split(':')[1]+1}${o?' (yerine: '+esc(o.name||o.material)+' rafa)':' (boş)'}</option>`}).join('')}</select>
+      <select style="margin-top:8px;width:100%" onchange="this.value && post('/api/assign',{slot:this.value,spool_id:'${s.id}'})"><option value="">🎛️ Yuvaya tak…</option>${aceSlotKeys().map(k=>{const o=S.spools.find(x=>x.id===S.slot_map[k]);return `<option value="${k}">${slotName(k)}${o?' (yerine: '+esc(o.name||o.material)+' rafa)':' (boş)'}</option>`}).join('')}</select>
       ${s.notes?`<div class="mut small" style="margin-top:6px">${esc(s.notes)}</div>`:''}</div>`; }
 function renderHist(){
   const L = S.live, err = S.cloud_error;
@@ -389,7 +409,12 @@ function renderHist(){
   // ayarlar
   const mode = S.settings.mode || 'manual';
   document.querySelectorAll('#modes input').forEach(r => r.checked = r.value === mode);
-  $('#lanCard').classList.toggle('hide', mode !== 'lan'); $('#cloudCard').classList.toggle('hide', mode !== 'cloud');
+  $('#lanCard').classList.toggle('hide', mode !== 'lan'); $('#cloudCard').classList.toggle('hide', mode !== 'cloud'); $('#bambuCard').classList.toggle('hide', mode !== 'bambu');
+  { const f = $('#bbf'); for (const [k, sk] of [['host','bambu_host'],['serial','bambu_serial']]) if (document.activeElement !== f[k] && !f[k].value) f[k].value = S.settings[sk] || '';
+    if (S.settings.bambu_has_code && !f.code.value) f.code.placeholder = '•••••••• (kayıtlı)';
+    const bs = S.lan_status || {}, set = S.settings.bambu_host && S.settings.bambu_serial && S.settings.bambu_has_code;
+    $('#bbState').textContent = !set ? 'ayarlanmadı' : mode !== 'bambu' ? 'kapalı' : bs.connected ? 'bağlı' : bs.error ? 'bağlanamadı' : 'bağlanıyor…';
+    $('#bbState').className = 'tag ' + (mode === 'bambu' && bs.connected ? 'acc' : ''); }
   if (document.activeElement !== $('#lanip') && !$('#lanip').value) $('#lanip').value = S.settings.lan_host || '';
   const ls = S.lan_status || {};
   $('#lanState').textContent = !S.settings.lan_host ? 'ayarlanmadı' : ls.connected ? 'bağlı' : ls.error ? 'bağlanamadı' : 'bağlanıyor…';
@@ -866,6 +891,15 @@ document.querySelectorAll('#modes input').forEach(r => r.onchange = () => post('
 async function lanTest(){ const host = $('#lanip').value.trim(); $('#lanMsg').innerHTML = '<span class="mut">Test ediliyor…</span>';
   try { const r = await post('/api/lan/test', {host}); $('#lanMsg').innerHTML = `<span class="pos">✓ Bulundu: ${esc(r.name||'Anycubic yazıcı')}${r.fw?' · '+esc(r.fw):''} — “Bağlan”a basabilirsin.</span>`; }
   catch(e){ $('#lanMsg').innerHTML = `<span class="err">${esc(e.message)}</span>`; } }
+function bbVals(){ const f = $('#bbf'); return {host: f.host.value.trim(), serial: f.serial.value.trim().toUpperCase(), code: f.code.value.trim()}; }
+async function bambuTest(){ $('#bbMsg').innerHTML = '<span class="mut">Bağlanılıyor (10 sn kadar sürebilir)…</span>';
+  try { const r = await post('/api/bambu/test', bbVals());
+    $('#bbMsg').innerHTML = `<span class="pos">✓ Bağlandı · durum: ${esc(r.state||'?')} · AMS yuvası: ${r.trays} — “Bağlan”a basabilirsin.</span>`; }
+  catch(e){ $('#bbMsg').innerHTML = `<span class="err">${esc(e.message)}</span>`; } }
+async function bambuSave(){ const v = bbVals();
+  if (!v.host || !v.serial || (!v.code && !S.settings.bambu_has_code)) return toast('IP, seri no ve erişim kodunu gir');
+  await post('/api/settings', {mode:'bambu', bambu_host: v.host, bambu_serial: v.serial, bambu_code: v.code});
+  $('#bbf').code.value = ''; toast('Bağlanılıyor…'); setTimeout(load, 4000); }
 async function lanSave(){ const host = $('#lanip').value.trim(); if (!host) return toast('IP adresi gir');
   await post('/api/settings', {mode:'lan', lan_host: host}); toast('Bağlanılıyor…'); setTimeout(load, 4000); }
 $('#costf').onchange = e => post('/api/settings', {[e.target.name]: +e.target.value});
