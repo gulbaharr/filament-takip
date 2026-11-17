@@ -888,8 +888,11 @@ function render(){
       : 'ACE\'deki hangi slota hangi makarayı taktığını seç — sadece hatırlatma amaçlı. Baskı kaydederken bu makaralar önce gelir.';
     const slots = cloud ? L.slots : [0,1,2,3].map(i => { const sp = S.spools.find(s=>s.id===S.slot_map['0:'+i]);
       return {key:'0:'+i, index:i, material: sp?.material || '', color: sp?.color, empty: !sp, manual: true}; });
+    // Bulutun 'takılı yuva' bilgisi baskı sırasında eskiyebiliyor; baskı takip ediliyorsa gramın düşüldüğü makaraları göster.
+    const planIds = Object.keys(S.track?.plan || {});
+    const activeKeys = L?.printing && planIds.length ? Object.entries(S.slot_map).filter(([k, v]) => planIds.includes(v)).map(([k]) => k) : null;
     const html = slots.map(sl => {
-      const sid = S.slot_map[sl.key], sp = S.spools.find(s=>s.id===sid), ld = cloud && L.loaded===sl.key;
+      const sid = S.slot_map[sl.key], sp = S.spools.find(s=>s.id===sid), ld = cloud && (activeKeys ? activeKeys.includes(sl.key) : L.loaded===sl.key);
       const head = `<div class="row"><div class="sw" style="background:${sp?(sp.color||'#888'):sl.empty?'transparent':(sl.color||'#888')};${!sp&&sl.empty?'border-style:dashed':''}"></div>
         <div style="min-width:0;flex:1"><b>${slotName(sl.key)}</b> ${ld?'<span class="tag acc">takılı</span>':''}<div class="mut small">${sp?esc(label(sp)):sl.empty?'boş':esc(sl.material)+' · makara atanmadı'}</div></div></div>`;
       if (sp) return `<div class="slot ${ld?'loaded':''}">${head}
