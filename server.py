@@ -163,7 +163,8 @@ def reserve_order(o: dict) -> str | None:
     if not items:
         return "Siparişte filament tahmini yok; stoktan bir şey düşülmedi."
     printed = {}  # bu siparişe zaten basılmış gerçek gramlar (grup bazında)
-    for h in STATE["history"]:
+    t = STATE.get("track")
+    for h in STATE["history"] + ([t] if t and t.get("order_id") == o["id"] else []):
         if h.get("order_id") == o["id"] and h.get("kind") != "reserve":
             for sid, gr in (h.get("per_spool") or {}).items():
                 sp = spool_by_id(sid)
