@@ -192,14 +192,34 @@ def parse_3mf(data: bytes, fname: str = "") -> dict:
     return slice_3mf(data, fname)
 
 
-def recent_slices(limit: int = 6) -> list[dict]:
-    """Anycubic Slicer Next'in geçici klasöründeki son dilimlemeler (yeniden eskiye)."""
+def _slice_files() -> list[str]:
     roots = {tempfile.gettempdir(), os.environ.get("TMPDIR", "")}
     files = []
     for r in filter(None, roots):
         files += glob.glob(os.path.join(r, "anycubicslicer_model", "*", "*", "Metadata", "*.gcode"))
+    return sorted(set(files), key=lambda p: os.path.getmtime(p), reverse=True)
+
+
+def find_slice(name: str) -> dict | None:
+    """Yazıcıya gönderilen işin adına (ör. '1117-1500-Birleştir_plate(01)_PLA_0.2_4h3m6s') karşılık gelen dilimleme."""
+    base = re.sub(r"\.(gcode|3mf)$", "", os.path.basename(name or ""), flags=re.I)
+    base = re.sub(r"\.gcode$", "", base, flags=re.I)
+    if not base:
+        return None
+    for p in _slice_files():
+        b = os.path.basename(p)
+        if re.sub(r"\.gcode$", "", b, flags=re.I) == base:
+            try:
+                return parse_gcode_file(p)
+            except (OSError, ValueError):
+                return None
+    return None
+
+
+def recent_slices(limit: int = 6) -> list[dict]:
+    """Anycubic Slicer Next'in geçici klasöründeki son dilimlemeler (yeniden eskiye)."""
     seen, out = set(), []
-    for p in sorted(set(files), key=lambda p: os.path.getmtime(p), reverse=True):
+    for p in _slice_files():
         b = os.path.basename(p)
         if b.startswith("."):
             continue

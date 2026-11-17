@@ -357,6 +357,8 @@ const I18N_EN = /*I18N_EN*/{
 "Baskı bitti: {0} · {1} g": "Print finished: {0} · {1} g",
 "Baskı geçmişi": "Print history",
 "Baskı kaydet": "Log print",
+"Baskı makarası düzeltildi (elle): {0} · {1} g aktarıldı": "Print spool corrected (manual): {0} · {1} g moved",
+"Baskı makarası düzeltildi (slicer dosyası): {0} · {1} g aktarıldı": "Print spool corrected (slicer file): {0} · {1} g moved",
 "Baskı süresi (sa)": "Print time (h)",
 "Baskı süresi (saat)": "Print time (hours)",
 "Baskı sırasında makaradan otomatik düş": "Deduct from the spool automatically while printing",
@@ -393,6 +395,7 @@ const I18N_EN = /*I18N_EN*/{
 "Bulut hatası: {0}": "Cloud error: {0}",
 "Buraya dönüp": "Come back here and press",
 "Chrome / Brave / Edge / Arc'ta": "In Chrome / Brave / Edge / Arc, go to",
+"Devam eden baskı ya da makara yok": "No ongoing print or spool",
 "Dil / Language": "Language / Dil",
 "Dilimleme 4 dakikada bitmedi; model çok büyük olabilir": "Slicing didn't finish in 4 minutes; the model may be too large",
 "Dosya okunamadı": "Couldn't read the file",
@@ -401,6 +404,7 @@ const I18N_EN = /*I18N_EN*/{
 "Durum": "Status",
 "Düzenle": "Edit",
 "Düşülen gramlar makaralara geri eklensin mi?": "Add the deducted grams back to the spools?",
+"Düşülen makara:": "Deducting from:",
 "Ek masraf (₺)": "Extra cost (₺)",
 "Elektrik": "Electricity",
 "Elektrik birim fiyatı (₺/kWh)": "Electricity price (₺/kWh)",
@@ -472,6 +476,7 @@ const I18N_EN = /*I18N_EN*/{
 "MQTT bağlantısı kurulamadı": "Couldn't open the MQTT connection",
 "MQTT bağlantısı reddedildi": "MQTT connection refused",
 "Makara": "Spool",
+"Makara düzeltildi": "Spool corrected",
 "Makara silinsin mi?": "Delete this spool?",
 "Makaralar": "Spools",
 "Makarayı düzenle": "Edit spool",
@@ -498,6 +503,7 @@ const I18N_EN = /*I18N_EN*/{
 "Rengi seçilmemiş": "No colour selected",
 "Renk": "Colour",
 "Renk adı": "Colour name",
+"Renkler slicer dosyasından okundu": "Colours read from the slicer file",
 "Sadece sil": "Just delete",
 "Satıcı": "Seller",
 "Satış fiyatı (₺, adet)": "Sale price (₺, per piece)",
@@ -524,6 +530,7 @@ const I18N_EN = /*I18N_EN*/{
 "Siparişte filament tahmini yok; stoktan bir şey düşülmedi.": "The order has no filament estimate; nothing was deducted.",
 "Siyah": "Black",
 "Slicer bu dosyayı dilimleyemedi": "The slicer couldn't slice this file",
+"Slicer dosyasına göre ({0} makara)": "From the slicer file ({0} spools)",
 "Slicer'da dilimledikten sonra gösterilen gram değerini (ya da yazıcı ekranındaki tüketimi) yaz. Çok renkli baskıda her makara için ayrı satır ekle.": "Enter the grams shown after slicing (or the usage on the printer screen). For multi-colour prints add a row per spool.",
 "Slicer'da yakın zamanda dilimlenmiş dosya bulunamadı. Anycubic Slicer Next'te dilimle, sonra tekrar dene — ya da .3mf dosyasını doğrudan seç.": "No recently sliced file found. Slice it in Anycubic Slicer Next and try again — or choose the .3mf file directly.",
 "Slot {0} (yerine: {1} rafa)": "Slot {0} (replaces {1} → shelf)",
@@ -579,6 +586,8 @@ const I18N_EN = /*I18N_EN*/{
 "Yazıcıdan anlaşılmayan cevap": "Unexpected response from the printer",
 "Yazıcının IP adresi (ör. 192.168.1.42)": "Printer IP address (e.g. 192.168.1.42)",
 "Yazıcının IP adresi (ör. {0})": "Printer IP address (e.g. {0})",
+"Yazıcının bildirdiği yuva": "Slot reported by the printer",
+"Yazıcının bildirdiği yuva · {0}": "Slot reported by the printer · {0}",
 "Yazıcıya ulaşılamadı ({0})": "Couldn't reach the printer ({0})",
 "Yazıcıya yerel ağdan bağlanılamıyor": "Can't reach the printer on the local network",
 "Yazıcıyı bağla (isteğe bağlı)": "Connect a printer (optional)",
@@ -863,6 +872,10 @@ function render(){
       <div class="prog" style="margin:10px 0"><i style="width:${p}%"></i></div>
       <div class="mut small">Bu baskıda harcanan: <b style="color:var(--ink)">${g(T?.grams||0)}</b>${L.est_m?` · tahmini toplam ${(L.est_m).toFixed(1)} m`:''}${L.est_g?` · tahmini toplam ${g(L.est_g)}`:''}</div>
       ${L.source==='bambu'&&!L.est_g?`<div class="small ${L.job_error?'err':'mut'}" style="margin-top:4px">${L.job_error?'⚠️ Gram bilgisi okunamadı: '+esc(L.job_error)+' — baskı bitince geçmişten elle düzelt.':'Gram bilgisi yazıcıdaki dosyadan okunuyor…'}</div>`:''}
+      ${T?(() => { const plan = Object.keys(T.plan||{}), loadedSp = S.spools.find(x=>x.id===S.slot_map[L.loaded]);
+        const cur = plan.length === 1 ? plan[0] : '';
+        const first = plan.length > 1 ? `Slicer dosyasına göre (${plan.length} makara)` : !plan.length ? `Yazıcının bildirdiği yuva${loadedSp?' · '+label(loadedSp):''}` : '';
+        return `<div class="row small" style="margin-top:8px"><span class="mut">Düşülen makara:</span><select style="flex:1" onchange="this.value && post('/api/track/spool',{spool_id:this.value}).then(()=>toast('Makara düzeltildi'))">${first?`<option value="">${esc(first)}</option>`:''}${ordered(S.spools).map(x=>`<option value="${x.id}" ${x.id===cur?'selected':''}>${slotOf(x.id)?'['+esc(slotName(slotOf(x.id)))+'] ':''}${esc(label(x))} (${Math.round(x.remaining_g)} g)</option>`).join('')}</select>${T.plan_src==='slicer'?'<span class="tag" title="Renkler slicer dosyasından okundu">slicer</span>':''}</div>`; })():''}
       ${T?`<div class="row small" style="margin-top:8px"><span class="mut">Bu baskı hangi sipariş için?</span><select style="flex:1" onchange="post('/api/track/order',{order_id:this.value||null})"><option value="">— sipariş yok —</option>${(S.orders||[]).filter(o=>!['teslim','iptal'].includes(o.status)||o.id===T.order_id).map(o=>`<option value="${o.id}" ${o.id===T.order_id?'selected':''}>${esc(o.item||'Sipariş')} · ${esc(o.customer||'')}</option>`).join('')}</select></div>`:''}`;
   }
 

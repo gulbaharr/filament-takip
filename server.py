@@ -351,6 +351,60 @@ def parse_info(info: dict) -> dict:
     }
 
 
+def _rgb(c):
+    c = str(c or "").lstrip("#")
+    try:
+        return tuple(int(c[i:i + 2], 16) for i in (0, 2, 4)) if len(c) >= 6 else None
+    except ValueError:
+        return None
+
+
+def slice_plan(t: dict) -> dict | None:
+    """Baskının slicer dosyasındaki renklere göre {makara_id: pay}. Bulut 'takılı yuva'yı güncel tutmuyor."""
+    try:
+        p = slicermod.find_slice(t.get("file") or "")
+    except Exception:  # noqa: BLE001
+        return None
+    if not p or not p.get("items"):
+        return None
+    ace = [(k, spool_by_id(sid)) for k, sid in STATE["slot_map"].items() if spool_by_id(sid)]
+    per = {}
+    for it in p["items"]:
+        c, mat = _rgb(it.get("color")), str(it.get("type") or "PLA").upper()
+        best, bd = None, 1e9
+        for _k, sp in ace:
+            sc = _rgb(sp.get("color"))
+            if c and sc:
+                d = sum((a - b) ** 2 for a, b in zip(c, sc)) ** 0.5 + (0 if mat_of(sp) == mat else 60)
+                if d < bd:
+                    best, bd = sp, d
+        if not best or bd >= 90:
+            best = spool_by_id(STATE["slot_map"].get(f"0:{it.get('slot')}"))
+        if not best:
+            return None
+        per[best["id"]] = per.get(best["id"], 0) + float(it["g"])
+    tot = sum(per.values())
+    return {k: v / tot for k, v in per.items()} if tot else None
+
+
+def apply_plan(t: dict, plan: dict, src: str) -> None:
+    """Planı uygula; o ana kadar başka makaradan düşülmüş gramı plana göre yeniden dağıt."""
+    t["plan"], t["plan_src"] = plan, src
+    done = {k: v for k, v in t["per_spool"].items() if spool_by_id(k)}
+    total = sum(done.values())
+    if STATE["settings"]["auto_deduct"]:
+        for k, v in done.items():
+            sp = spool_by_id(k)
+            sp["remaining_g"] = min(sp["total_g"], sp["remaining_g"] + v)
+        for k, f in plan.items():
+            sp = spool_by_id(k)
+            sp["remaining_g"] = max(0.0, sp["remaining_g"] - total * f)
+    t["per_spool"] = {**{k: v for k, v in t["per_spool"].items() if not spool_by_id(k)}, **{k: total * f for k, f in plan.items()}}
+    if total and set(done) != set(plan):
+        names = ", ".join(spool_label(spool_by_id(k)) for k in plan)
+        log(f"Baskı makarası düzeltildi ({'slicer dosyası' if src == 'slicer' else 'elle'}): {names} · {total:.1f} g aktarıldı")
+
+
 def _deduct(t: dict, live: dict, new_progress) -> None:
     """t['progress'] → new_progress arası tüketimi takılı slottaki makaradan düş."""
     if new_progress is None:
@@ -367,18 +421,25 @@ def _deduct(t: dict, live: dict, new_progress) -> None:
     t["progress"] = max(new_progress, t.get("progress") or 0)
     if not dp:
         return
-    slot = live.get("loaded")
-    sid = STATE["slot_map"].get(slot) if slot else None
-    sp = spool_by_id(sid) if sid else None
-    mat = sp["material"] if sp else next((s["material"] for s in live.get("slots", []) if s["key"] == slot), "PLA")
+    plan = {k: f for k, f in (t.get("plan") or {}).items() if spool_by_id(k)}
+    if plan:
+        parts = [(spool_by_id(k), f) for k, f in plan.items()]
+        slot = None
+    else:
+        slot = live.get("loaded")
+        sid = STATE["slot_map"].get(slot) if slot else None
+        parts = [(spool_by_id(sid) if sid else None, 1.0)]
+    first = parts[0][0]
+    mat = first["material"] if first else next((s["material"] for s in live.get("slots", []) if s["key"] == slot), "PLA")
     g = dp / 100.0 * total_g if total_g else grams_from_mm(dp / 100.0 * total_mm, mat)
     t["grams"] += g
-    k = sid or f"slot:{slot}"
-    t["per_spool"][k] = t["per_spool"].get(k, 0) + g
-    if sp and STATE["settings"]["auto_deduct"]:
-        sp["remaining_g"] = max(0.0, sp["remaining_g"] - g)
-        if t.get("order_id"):
-            reconcile(t["order_id"], {sp["id"]: g})
+    for sp, f in parts:
+        k = sp["id"] if sp else f"slot:{slot}"
+        t["per_spool"][k] = t["per_spool"].get(k, 0) + g * f
+        if sp and STATE["settings"]["auto_deduct"]:
+            sp["remaining_g"] = max(0.0, sp["remaining_g"] - g * f)
+            if t.get("order_id"):
+                reconcile(t["order_id"], {sp["id"]: g * f})
 
 
 def track(live: dict) -> None:
@@ -396,6 +457,11 @@ def track(live: dict) -> None:
                                   "progress": 0, "est_m": live.get("est_m"), "grams": 0.0,
                                   "per_spool": {}, "order_id": None}
             log(f"Baskı algılandı: {live['file']}")
+        if "plan_checked" not in t and live.get("source") != "bambu":
+            t["plan_checked"] = True  # Bambu'da AMS'in o an beslediği yuva güvenilir, gerek yok
+            plan = slice_plan(t)
+            if plan:
+                apply_plan(t, plan, "slicer")
         _deduct(t, live, live["progress"])
     elif t:
         # Yazıcı "bitti" diyorsa kalan kısmı da düş; iptalde olduğu yerde kalır.
@@ -721,6 +787,14 @@ class H(BaseHTTPRequestHandler):
                         if h["order_id"] and h.get("reconciled") != h["order_id"]:
                             reconcile(h["order_id"], h.get("per_spool") or {})
                             h["reconciled"] = h["order_id"]
+                save()
+                return None
+            elif path == "/api/track/spool":
+                t = STATE.get("track")
+                sp = spool_by_id(d.get("spool_id"))
+                if not t or not sp:
+                    raise ValueError("Devam eden baskı ya da makara yok")
+                apply_plan(t, {sp["id"]: 1.0}, "manual")
                 save()
                 return None
             elif path == "/api/track/order":
