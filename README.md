@@ -1,38 +1,57 @@
-# Filament Takip
+# Filament Tracker
 
-Anycubic Kobra S1 + ACE Pro ve Bambu Lab (AMS) için filament stoğu, baskı maliyeti ve müşteri siparişi takibi.
-Mac'te yerel çalışır; tarayıcıda `http://127.0.0.1:8765` olarak açılır. Python 3 dışında hiçbir şey kurmak gerekmez
-(sadece standart kütüphane, harici paket yok).
+🇬🇧 **English** · 🇹🇷 [Türkçe](README.tr.md)
 
-## Neler yapar
+Filament stock, print cost and customer-order tracking for **Anycubic Kobra S1 + ACE Pro** and **Bambu Lab (AMS)**.
+Runs locally on your Mac and opens in the browser at `http://127.0.0.1:8765`. Nothing to install besides Python 3
+(standard library only, no packages). The UI is available in English and Turkish — it follows your browser language
+and can be switched with the EN / TR button in the top-right corner.
 
-**Makaralar ve stok**
-- ACE Pro / AMS yuvaları ve raftaki makaralar ayrı gösterilir; makaraların sırası sabit kalır.
-- Baskı ilerledikçe takılı yuvadaki makaradan gram otomatik düşer (Anycubic Cloud, Anycubic LAN ya da Bambu Lab LAN).
-- Bağlantı olmadan da kullanılabilir: "✓ Baskı ekle" ile elle kayıt.
-- Azalan makaralar için uyarı, renk / malzeme bazında gram fiyatı tablosu.
+![Dashboard](docs/dashboard.png)
 
-**Maliyet**
-- Maliyet = filament + elektrik + işçilik + ek masraf.
-- Filament fiyatı renge göre hesaplanır: makaranın kendi fiyatı → aynı renk → aynı malzeme → genel ortalama.
-- Ayarlardaki kâr marjına göre önerilen satış fiyatı.
+## Features
 
-**Siparişler ve ürün kataloğu**
-- Müşteri siparişleri (Bekliyor → Basılıyor → Hazır → Teslim), teslim tarihi, geciken uyarısı.
-- Sipariş "Basılıyor" olunca tahmini gram stoktan düşer; gerçek baskı siparişe bağlandıkça mahsup edilir,
-  aynı filament iki kez düşülmez (Ayarlar → Tercihler'den kapatılabilir).
-- Açık siparişlere göre stok planı: "bu siparişlerden sonra kırmızı X g kalacak" ve eksikler için alışveriş listesi.
-- 💰 Beklenen para: hazır, teslim edilmemiş siparişlerin müşteri bazında toplamı.
-- Sık basılan ürünler için katalog: gram, süre ve renkler bir kere girilir, siparişe tek tıkla eklenir.
-- Filament alımları (Alınacak → Sipariş verildi → Kargoda → Teslim alındı); gelen makaralar stoğa eklenir.
+**Spools and stock**
+- ACE Pro / AMS slots and shelf spools are shown separately; spools keep a stable order.
+- While a print runs, grams are deducted automatically from the loaded slot (Anycubic Cloud, Anycubic LAN or Bambu Lab LAN).
+- Works without any printer connection too: log prints by hand with "✓ Log print".
+- Low-stock warnings and a per-colour / per-material price table.
 
-**Slicer'dan içe aktarma**
-- G-code ya da `.gcode.3mf` sürükle bırak: gram, renk ve süre otomatik dolar, renkler stoktaki makaralarla eşleşir.
-- "Slicer'daki son dilimleme" butonu Anycubic Slicer Next'te son dilimlediğin işi okur.
-- Dilimlenmemiş `.3mf` proje dosyaları, Anycubic Slicer Next yüklüyse arka planda dilimlenir (birkaç saniye).
-- Çok tablalı projelerde tabla seçilebilir.
+**Cost**
+- Cost = filament + electricity + labour + extras.
+- Filament price follows the colour: the spool's own price → same colour → same material → overall average.
+- Suggested sale price from the profit margin in Settings. Currency is configurable.
 
-## Kurulum
+**Orders and product catalogue**
+- Customer orders (Waiting → Printing → Ready → Delivered) with due dates and overdue warnings.
+- When an order is set to "Printing", its estimated grams are deducted from stock; as real prints are linked to the
+  order the estimate is given back, so nothing is counted twice (can be turned off in Settings → Preferences).
+- Stock plan for open orders: "after these orders you'll have X g of red left", plus a shopping list for shortages.
+- 💰 Expected money: per-customer total of orders that are ready but not delivered yet.
+- Catalogue for products you print often: enter grams, time and colours once, add to an order with one click.
+- Filament purchases (To buy → Ordered → Shipped → Received); received spools are added to stock with their price.
+
+**Import from your slicer**
+- Drag and drop G-code or `.gcode.3mf`: grams, colours and time are filled in and colours are matched to your spools.
+- "Latest slice in the slicer" reads the job you last sliced in Anycubic Slicer Next.
+- Unsliced `.3mf` projects are sliced in the background if Anycubic Slicer Next is installed (a few seconds).
+- Pick a plate in multi-plate projects.
+
+## Screenshots
+
+| Orders and expected money | Spools and AMS slots |
+|---|---|
+| ![Orders](docs/orders.png) | ![Spools](docs/spools.png) |
+
+| Order editor with cost estimate | Bambu Lab connection |
+|---|---|
+| ![Order editor](docs/order-edit.png) | ![Settings](docs/settings.png) |
+
+![Product catalogue](docs/products.png)
+
+Names and data in the screenshots are made up.
+
+## Install
 
 ```bash
 git clone https://github.com/gulbaharr/filament-takip.git
@@ -40,64 +59,65 @@ cd filament-takip
 ./install.sh
 ```
 
-`~/Applications/Filament Takip.app` oluşur ve açılır. Sonraki açılışlarda uygulamaya çift tıklamak yeterli.
-Kodu değiştirince yeniden `./install.sh` çalıştır.
+This creates and opens `~/Applications/Filament Takip.app`; afterwards just double-click the app.
+Run `./install.sh` again after changing the code.
 
-Kurmadan denemek için: `python3 server.py` (port değiştirmek için `FILAMENT_PORT=9000 python3 server.py`).
+To try it without installing: `python3 server.py` (other port: `FILAMENT_PORT=9000 python3 server.py`).
 
-## Yazıcı bağlantısı
+## Printer connection
 
-İkisi de isteğe bağlı; ikisi olmadan uygulama elle kullanılabilir.
+All optional — without one, the app is used by hand.
 
-| Yöntem | Nasıl | Not |
+| Method | How | Notes |
 |---|---|---|
-| **Anycubic Cloud** | cloud-universe.anycubic.com'a Chrome / Brave / Edge / Arc ile giriş yap → Ayarlar → "Tarayıcıdan otomatik bul". Ya da tarayıcı konsolunda `copy(localStorage['XX-Token'])` ile alıp yapıştır. | Token yaklaşık 90 gün geçerli. |
-| **LAN (yerel ağ)** | Yazıcıda LAN modunu aç → Ayarlar → yazıcının IP adresini gir → "Test et" → "Bağlan". | Sadece Kobra S1 için yazıldı; internet gerekmez. |
-| **Bambu Lab** | Ayarlar → 🟩 Bambu Lab → IP, seri numarası ve erişim kodu (yazıcı ekranı: Ayarlar → WLAN / Cihaz) → "Test et" → "Bağlan". | X1 / P1 / A1 / H2. Yeni firmware'lerde LAN Only + Developer Mode gerekebilir. |
+| **Anycubic Cloud** | Sign in at cloud-universe.anycubic.com in Chrome / Brave / Edge / Arc → Settings → "Find automatically in browser". Or run `copy(localStorage['XX-Token'])` in the browser console and paste it. | The token lasts about 90 days. |
+| **LAN (local network)** | Turn on LAN Mode on the printer → Settings → enter the printer's IP → "Test" → "Connect". | Written for the Kobra S1; no internet needed. |
+| **Bambu Lab** | Settings → 🟩 Bambu Lab → IP, serial number and access code (printer screen: Settings → WLAN / Device) → "Test" → "Connect". | X1 / P1 / A1 / H2. Newer firmware may need LAN Only + Developer Mode. |
 
-Gram şöyle hesaplanır:
-- **Anycubic:** baskıda kullanılan uzunluk (mm) ya da ilerleme × tahmini uzunluk → `uzunluk × π × 0,875² × yoğunluk`.
-- **Bambu:** baskı başlayınca yazıcıdaki `.gcode.3mf` FTPS ile okunur, `slice_info` içindeki toplam gram × ilerleme.
+How grams are calculated:
+- **Anycubic:** filament length used (mm), or progress × estimated length → `length × π × 0.875² × density`.
+- **Bambu:** when a print starts, the `.gcode.3mf` on the printer is read over FTPS; total grams from `slice_info` × progress.
 
-Her iki durumda da gram, o anda takılı (AMS / ACE'den beslenen) yuvadaki makaradan düşülür. Yazıcı kısa süre
-"boşta" görünürse baskı bitmiş sayılmaz (3 dakika beklenir); iptal edilen baskıda sadece basılan kısım düşer.
+Either way the grams come off the spool in the slot that is feeding at that moment (AMS / ACE). If the printer briefly
+reports "idle", the print isn't considered finished (it waits 3 minutes); a cancelled print only deducts what was printed.
 
-## Hangi yazıcı ve slicer'larla çalışır?
+## Supported printers and slicers
 
-| | Durum |
+| | Status |
 |---|---|
-| Anycubic Kobra S1 + ACE Pro | ✅ Canlı takip (Cloud ve LAN) |
-| Diğer Anycubic yazıcılar (Cloud) | ⚠️ Büyük ihtimalle çalışır, denenmedi |
-| Bambu Lab X1 / P1 / A1 / H2 (+ AMS) | ✅ Canlı takip (yerel ağ); sahte yazıcıyla test edildi, gerçek cihazda denenmedi |
-| Prusa, Creality vb. | ❌ Canlı takip yok; elle kayıt ve dosya içe aktarma çalışır |
-| Anycubic Slicer Next, Bambu Studio, OrcaSlicer G-code / `.gcode.3mf` | ✅ Gram, renk, süre okunur |
-| PrusaSlicer G-code | ⚠️ Aynı satır biçimini kullanıyor, çalışması beklenir; denenmedi |
-| Cura G-code | ❌ Gram yazmıyor (sadece metre), okunamaz |
-| Dilimlenmemiş `.3mf` | Anycubic Slicer Next yüklüyse arka planda dilimlenir |
+| Anycubic Kobra S1 + ACE Pro | ✅ Live tracking (Cloud and LAN) |
+| Other Anycubic printers (Cloud) | ⚠️ Likely works, untested |
+| Bambu Lab X1 / P1 / A1 / H2 (+ AMS) | ✅ Live tracking (local network); tested against a simulated printer, not yet on real hardware |
+| Prusa, Creality, etc. | ❌ No live tracking; manual logging and file import work |
+| Anycubic Slicer Next, Bambu Studio, OrcaSlicer G-code / `.gcode.3mf` | ✅ Grams, colours and time are read |
+| PrusaSlicer G-code | ⚠️ Same line format, expected to work; untested |
+| Cura G-code | ❌ Doesn't write grams (only metres) |
+| Unsliced `.3mf` | Sliced in the background if Anycubic Slicer Next is installed |
 
-## Veriler
+## Data
 
-- Tüm veriler: `~/Library/Application Support/FilamentTakip/data.json` (yedek almak için bu dosyayı kopyala).
-- Log: aynı klasörde `server.log`.
-- Veri dosyası repoda yoktur (`.gitignore`); GitHub'a gitmez.
-- Sunucu sadece `127.0.0.1`'i dinler, ağdaki başka cihazlar erişemez. Yazma isteklerinde `X-Filament: 1` başlığı istenir.
+- Everything is stored in `~/Library/Application Support/FilamentTakip/data.json` (copy this file to back up).
+- Log: `server.log` in the same folder.
+- The data file is not in the repository (`.gitignore`).
+- The server only listens on `127.0.0.1`; other devices on the network can't reach it. Write requests require an `X-Filament: 1` header.
 
-## Dosyalar
+## Files
 
-| Dosya | Görevi |
+| File | Purpose |
 |---|---|
-| `server.py` | HTTP sunucusu, veri, Anycubic Cloud, baskı takibi, maliyet / rezervasyon |
-| `bambu.py` | Bambu Lab yerel ağ bağlantısı (MQTT 8883 + FTPS 990) |
-| `lan.py` | Kobra S1 LAN bağlantısı (MQTT); protokol [chrisfore/anycubic_ha_local](https://github.com/chrisfore/anycubic_ha_local) belgelerine dayanır |
-| `slicer.py` | G-code / 3mf okuma, Anycubic Slicer Next ile arka planda dilimleme |
-| `index.html` | Arayüzün tamamı (tek sayfa) |
-| `install.sh` | macOS uygulamasını kurar / günceller |
+| `server.py` | HTTP server, data, Anycubic Cloud, print tracking, cost / reservations |
+| `bambu.py` | Bambu Lab local connection (MQTT 8883 + FTPS 990) |
+| `lan.py` | Kobra S1 LAN connection (MQTT); protocol documented by [chrisfore/anycubic_ha_local](https://github.com/chrisfore/anycubic_ha_local) |
+| `slicer.py` | G-code / 3mf parsing, background slicing with Anycubic Slicer Next |
+| `index.html` | The whole UI (single page), including the EN / TR dictionary |
+| `install.sh` | Installs / updates the macOS app |
 
-Cloud imza yöntemi: [Nino6689/hass-anycubic](https://github.com/Nino6689/hass-anycubic) (web modu).
+Cloud request signing: [Nino6689/hass-anycubic](https://github.com/Nino6689/hass-anycubic) (web mode).
 
-## Sınırlamalar
+## Limitations
 
-- Sadece macOS'ta denendi (`install.sh` ve tarayıcıdan token bulma macOS'a özel; `server.py` başka sistemlerde de çalışmalı).
-- Vercel gibi sunucusuz ortamlarda olduğu gibi çalışmaz: kalıcı dosya, arka plan takibi ve yerel ağ erişimi gerekir.
-- Arka planda dilimleme projenin kendi ayarlarını kullanır; bazı dosyalarda slicer'ın komut satırı çökebilir.
-  O zaman dosyayı slicer'da dilimleyip "Slicer'daki son dilimleme" butonunu kullan.
+- Only tested on macOS (`install.sh` and browser token detection are macOS-specific; `server.py` should run elsewhere).
+- Doesn't run as-is on serverless hosts like Vercel: it needs a persistent file, background tracking and local network access.
+- Background slicing uses the project's own settings; the slicer's command line can crash on some files.
+  In that case slice it in the slicer and use "Latest slice in the slicer".
+- The UI is written in Turkish and translated to English at runtime; a few rare messages may still appear in Turkish.

@@ -113,6 +113,7 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
     <button data-t="gecmis">Geçmiş</button>
     <button data-t="ayar">Ayarlar</button>
   </nav>
+  <button class="b mini" id="langBtn" title="Dil / Language" onclick="setLang(LANG === 'en' ? 'tr' : 'en')" style="margin-left:6px"></button>
 </header>
 <main>
   <!-- PANO -->
@@ -200,8 +201,8 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
     </div>
     <div class="card hide" id="bambuCard">
       <h2>🟩 Bambu Lab bağlantısı <span id="bbState" class="tag"></span></h2>
-      <div class="warnbox">Yazıcı ekranında <b>Ayarlar → WLAN / Ağ</b> bölümünden <b>IP adresini</b> ve <b>erişim kodunu</b> (Access Code), <b>Ayarlar → Cihaz</b>'dan <b>seri numarasını</b> al.
-        Yeni firmware'lerde bağlantı için <b>LAN Only Mode</b> ve <b>Developer Mode</b>'u açman gerekebilir; o modda Bambu Handy ve bulut çalışmaz (Bambu Studio'dan yerel ağla göndermeye devam edersin).</div>
+      <div class="warnbox"><b>IP adresi</b> ve <b>erişim kodu</b> (Access Code): yazıcı ekranında Ayarlar → WLAN / Ağ. <b>Seri numarası</b>: Ayarlar → Cihaz.<br>
+        Yeni firmware'lerde <b>LAN Only Mode</b> ve <b>Developer Mode</b>'u açman gerekebilir; o modda Bambu Handy ve bulut çalışmaz (Bambu Studio'dan yerel ağla göndermeye devam edersin).</div>
       <form id="bbf" onsubmit="return false" class="mform" style="margin-top:12px">
         <div class="three"><label>IP adresi<input name="host" placeholder="ör. 192.168.1.50"></label>
           <label>Seri numarası<input name="serial" placeholder="ör. 01P00A123456789" autocapitalize="characters"></label>
@@ -230,7 +231,7 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
         <label>Yazıcı ortalama güç (W)<input type="number" step="1" name="printer_watt"></label></div>
         <div class="two"><label>İşçilik (₺/saat, elle çalışma)<input type="number" step="1" name="labor_hour"></label>
         <label>Varsayılan kâr marjı (%)<input type="number" step="1" name="margin"></label></div>
-        <div class="two"><label>Fiyatı bilinmeyen filament (₺/kg)<input type="number" step="1" name="default_kg" placeholder="ör. 600"></label><span></span></div>
+        <div class="two"><label>Fiyatı bilinmeyen filament (₺/kg)<input type="number" step="1" name="default_kg" placeholder="ör. 600"></label><label>Para birimi<input name="currency" maxlength="4" placeholder="₺"></label></div>
       </form>
       <p class="mut small">Kobra S1 baskı sırasında ortalama ~150 W çeker (tabla ısınırken daha fazla). Sipariş maliyeti = filament (makaranın ₺/g fiyatı) + elektrik (baskı süresi × W × kWh) + işçilik (senin harcadığın süre × ₺/saat) + ek masraflar.</p>
     </div>
@@ -277,12 +278,536 @@ dialog.drop{outline:3px dashed var(--acc);outline-offset:-8px}
 <div class="toast" id="toast"></div>
 
 <script>
+// ===================== Dil (TR / EN) =====================
+// Arayüz Türkçe yazıldı; İngilizce seçiliyse ekrandaki metinler I18N_EN sözlüğüyle çevrilir.
+const LANG = (() => { try { const v = localStorage.getItem('ft-lang'); if (v === 'tr' || v === 'en') return v; } catch {}
+  return /^tr\b/i.test(navigator.language || '') ? 'tr' : 'en'; })();
+const LOC = LANG === 'en' ? 'en-US' : 'tr-TR';
+const CUR = () => (typeof S !== 'undefined' && S?.settings?.currency) || '₺';
+document.documentElement.lang = LANG;
+function setLang(l){ try { localStorage.setItem('ft-lang', l); } catch {} location.reload(); }
+const I18N_EN = /*I18N_EN*/{
+"'a bas. (Safari kullanıyorsan aşağıdaki elle yöntemi kullan.)": ". (On Safari, use the manual method below.)",
+"'e bas, Slicer'ın gösterdiği gramı yaz; makaradan düşülür.": " and enter the grams your slicer showed; they are deducted from the spool.",
+"'nu açman gerekiyor. LAN Modu açıkken yazıcı Anycubic hesabından çıkar: telefon uygulaması ve buluttan baskı gönderme çalışmaz (Slicer'dan yerel ağ ile göndermeye devam edebilirsin). Kapatıp yazıcıyı uygulamadan tekrar eklersen eski haline döner.": " on the printer screen. While LAN Mode is on, the printer leaves your Anycubic account: the phone app and cloud printing stop working (you can still send from the slicer over the local network). Turn it off and re-add the printer in the app to go back.",
+"'u açman gerekebilir; o modda Bambu Handy ve bulut çalışmaz (Bambu Studio'dan yerel ağla göndermeye devam edersin).": " to connect; in that mode Bambu Handy and the cloud stop working (you can still send from Bambu Studio over the local network).",
+"(ACE'de takılı)": "(loaded in ACE)",
+"(Access Code): yazıcı ekranında Ayarlar → WLAN / Ağ.": "(Access Code): on the printer screen, Settings → WLAN / Network.",
+"(adet başı değerlerle)": "(using per-piece values)",
+"(boş)": "(empty)",
+"(elle)": "(manual)",
+"(filament {0} ₺ · elektrik {1} ₺)": "(filament {0} ₺ · electricity {1} ₺)",
+"(filament {1} · elektrik {2}{3})": "(filament {1} · electricity {2}{3})",
+"(kargo": "(shipping",
+"(kargo {0} ₺)": "(shipping {0} ₺)",
+"(renk farketmez)": "(any colour)",
+"(stokta yok)": "(out of stock)",
+"(yerine:": "(replacing:",
+"+ Başka makara": "+ Another spool",
+"+ Makara ekle": "+ Add spool",
+"+ Renk ekle": "+ Add colour",
+"+ Satır ekle": "+ Add row",
+"+ Sipariş": "+ Order",
+"+ Sipariş oluştur": "+ Create order",
+"+ Yeni alım": "+ New purchase",
+"+ Yeni makara tak": "+ Load new spool",
+"+ Yeni sipariş": "+ New order",
+"+ Yeni ürün": "+ New product",
+"8 haneli kod": "8-digit code",
+": Ayarlar → Cihaz.": ": Settings → Device.",
+"ACE'deki hangi slota hangi makarayı taktığını seç — sadece hatırlatma amaçlı. Baskı kaydederken bu makaralar önce gelir.": "Pick which spool is in which ACE slot — just a reminder. These spools are listed first when logging a print.",
+"Adet": "Qty",
+"Adet maliyeti": "Cost per piece",
+"Alım": "Purchase",
+"Alım kaydedildi": "Purchase saved",
+"Alım listesine eklendi": "Added to the shopping list",
+"Alım silinsin mi?": "Delete this purchase?",
+"Alım teslim alındı: {0} · {1} makara stoğa eklendi": "Purchase received: {0} · {1} spools added to stock",
+"Alımlar": "Purchases",
+"Alımı düzenle": "Edit purchase",
+"Alınacak": "To buy",
+"Anycubic bağlantı sorunu": "Anycubic connection problem",
+"Anycubic hesabını bağlamak tamamen isteğe bağlı; bağlarsan {0}. adım otomatik olur.": "Connecting a printer is completely optional; if you do, step {0} happens automatically.",
+"Anycubic karton makara ≈ {0} g, plastik ≈ {1}–{2} g. Kasnak ağırlığı bu makara için hatırlanır.": "A cardboard spool ≈ {0} g, plastic ≈ {1}–{2} g. The core weight is remembered for this spool.",
+"Anycubic yazıcı": "Anycubic printer",
+"Anycubic: {0}": "Anycubic: {0}",
+"Ara (marka, renk, malzeme)…": "Search (brand, colour, material)…",
+"Ara (müşteri, ürün)…": "Search (customer, product)…",
+"Ara (ürün)…": "Search (product)…",
+"Aranıyor…": "Searching…",
+"Atanmamış slot": "Unassigned slot",
+"Ayarlar": "Settings",
+"Ayarlar → Ağ": "Settings → Network",
+"Ayarlar → Ağ → LAN Modu": "Settings → Network → LAN Mode",
+"Ayarlar → Cihaz": "Settings → Device",
+"Az kaldı uyarı eşiği (g)": "Low-stock warning threshold (g)",
+"Azalanlar": "Running low",
+"Açık": "Open",
+"Açık sipariş": "Open orders",
+"Açık sipariş yok.": "No open orders.",
+"Açık siparişlerde filament tahmini yok. Siparişe renk + gram girince burada ne kadar ayrıldığı ve sonra ne kalacağı görünür.": "Open orders have no filament estimate. Enter colour + grams on an order to see what's reserved and what will be left.",
+"Ağırlık": "Weight",
+"Bambu Lab ({0}) · basıyor · yerel ağ": "Bambu Lab ({0}) · printing · local network",
+"Bambu: '{0}' gramı okunamadı ({1}); baskıyı bitince elle düzelt": "Bambu: couldn't read grams for '{0}' ({1}); fix it manually after the print",
+"Bambu: '{0}' için {1} g okundu": "Bambu: read {1} g for '{0}'",
+"Bambu: yazıcıya bağlanıldı ({0})": "Bambu: connected to the printer ({0})",
+"Bambu: {0}": "Bambu: {0}",
+"Baskı": "Print",
+"Baskı algılandı: {0}": "Print detected: {0}",
+"Baskı bitti: {0} · {1} g": "Print finished: {0} · {1} g",
+"Baskı geçmişi": "Print history",
+"Baskı kaydet": "Log print",
+"Baskı süresi (sa)": "Print time (h)",
+"Baskı süresi (saat)": "Print time (hours)",
+"Baskı sırasında makaradan otomatik düş": "Deduct from the spool automatically while printing",
+"Basılıyor": "Printing",
+"Bağlan": "Connect",
+"Bağlandı ✓": "Connected ✓",
+"Bağlantı hatası: {0}": "Connection error: {0}",
+"Bağlantı kapandı": "Connection closed",
+"Bağlantı kuruldu ama rapor gelmedi — seri numarası yanlış olabilir": "Connected but no report arrived — the serial number may be wrong",
+"Bağlantı yok, baskıları sen kaydedersin": "No connection, you log prints yourself",
+"Bağlantıyı kaldır": "Disconnect",
+"Bağlanılıyor (10 sn kadar sürebilir)…": "Connecting (may take ~10 s)…",
+"Bağlanılıyor…": "Connecting…",
+"Bağlı baskı kayıtları silinmez, sadece siparişten ayrılır.": "Linked print records aren't deleted, just unlinked from the order.",
+"Beklenen para": "Expected money",
+"Beklenmeyen hata: {0}": "Unexpected error: {0}",
+"Bekliyor": "Waiting",
+"Bir baskı bitince": "When a print finishes, press",
+"Birim ₺": "Unit ₺",
+"Boş makara (kasnak) ağırlığı": "Empty spool (core) weight",
+"Broker bilgisi eksik": "Broker info missing",
+"Bu .3mf dilimlenmemiş ve Anycubic Slicer Next bulunamadı. Slicer'da dilimleyip 'Slicer'daki son dilimleme' butonunu kullan.": "This .3mf isn't sliced and Anycubic Slicer Next wasn't found. Slice it in the slicer and use the 'Latest slice in the slicer' button.",
+"Bu alım zaten stoğa eklendi": "This purchase was already added to stock",
+"Bu ay ciro": "Revenue this month",
+"Bu ay kâr": "Profit this month",
+"Bu baskı hangi sipariş için?": "Which order is this print for?",
+"Bu baskıda harcanan:": "Used in this print:",
+"Bu filtrede sipariş yok. “+ Yeni sipariş” ile ekle.": "No orders in this filter. Add one with “+ New order”.",
+"Bu rengin fiyatı girilmemiş": "No price entered for this colour",
+"Bu renklerde stok yok; stoktan bir şey düşülmedi.": "No stock in these colours; nothing was deducted.",
+"Bu yazıcı modeli desteklenmiyor": "This printer model isn't supported",
+"Bu ürünle açılmış siparişler silinmez.": "Orders created from this product aren't deleted.",
+"Bu ürünü kataloğa kaydet, sonraki siparişlerde tek tıkla seç": "Save this product to the catalogue to pick it with one click next time",
+"Bulut hatası: {0}": "Cloud error: {0}",
+"Buraya dönüp": "Come back here and press",
+"Chrome / Brave / Edge / Arc'ta": "In Chrome / Brave / Edge / Arc, go to",
+"Dil / Language": "Language / Dil",
+"Dilimleme 4 dakikada bitmedi; model çok büyük olabilir": "Slicing didn't finish in 4 minutes; the model may be too large",
+"Dosya okunamadı": "Couldn't read the file",
+"Dosyada gram bilgisi yok": "The file has no gram data",
+"Dosyada gram bilgisi yok. Dilimlenmiş G-code (ya da 'G-code 3mf') dosyası olmalı.": "The file has no gram data. It must be a sliced G-code (or 'G-code 3mf') file.",
+"Durum": "Status",
+"Düzenle": "Edit",
+"Düşülen gramlar makaralara geri eklensin mi?": "Add the deducted grams back to the spools?",
+"Ek masraf (₺)": "Extra cost (₺)",
+"Elektrik": "Electricity",
+"Elektrik birim fiyatı (₺/kWh)": "Electricity price (₺/kWh)",
+"Elle almak için: Anycubic sitesinde giriş yaptıktan sonra Geliştirici Araçları → Console'a": "To get it manually: after signing in on the Anycubic site, open Developer Tools → Console, type",
+"Elle baskı kaydı: {0} · {1} g": "Manual print log: {0} · {1} g",
+"Elle mod · giriş gerekmez ·": "Manual mode · no login needed ·",
+"En az bir makara ve gram gir": "Enter at least one spool and its grams",
+"Erişim kodu": "Access code",
+"Erişim kodu yanlış": "Wrong access code",
+"Erişim kodunu gir": "Enter the access code",
+"Filament": "Filament",
+"Filament (1 adet için)": "Filament (for 1 piece)",
+"Filament (adet başı, slicer'daki gram) — çok renkliyse her renk için satır ekle": "Filament (per piece, grams from the slicer) — add a row per colour if multi-colour",
+"Filament ({0} adet için)": "Filament (for {0} pieces)",
+"Filament Takip": "Filament Tracker",
+"Filament siparişlerin. “Teslim alındı” deyince makaralar fiyatıyla (kargo payı dahil) otomatik stoğa eklenir.": "Your filament orders. When marked “Received”, the spools are added to stock with their price (including a share of shipping).",
+"Fiyat": "Price",
+"Fiyat (₺)": "Price (₺)",
+"Fiyat girilmemiş — ✎ ile ekle": "No price — add it with ✎",
+"Fiyatsız makaralar bu ortalamayı kullanır": "Spools without a price use this average",
+"Fiyatı bilinmeyen filament (₺/kg)": "Filament with unknown price (₺/kg)",
+"Geciken": "Overdue",
+"Genel ortalama — {0}": "Overall average — {0}",
+"Gerçek baskı (otomatik ya da “Baskı ekle”) siparişe bağlanınca tahmin geri verilir, çift düşülmez. “Bekliyor” / “İptal”e çekersen kalan tahmin iade edilir.": "When a real print (automatic or “Add print”) is linked to the order, the estimate is given back — nothing is deducted twice. Setting it back to “Waiting” / “Cancelled” returns the rest of the estimate.",
+"Geçerli bir .3mf dosyası değil": "Not a valid .3mf file",
+"Geçerli bir IP adresi gir": "Enter a valid IP address",
+"Geçmiş": "History",
+"Gram": "Grams",
+"Gram bilgisi yazıcıdaki dosyadan okunuyor…": "Reading grams from the file on the printer…",
+"Gram ekle veya çıkar": "Add or subtract grams",
+"Gram, baskı başlayınca yazıcıdaki dosyadan (slice bilgisi) okunur ve baskı ilerledikçe o anda AMS'ten beslenen makaradan düşülür. AMS yuvalarına makaralarını Pano'dan atayabilirsin.": "When a print starts, grams are read from the file on the printer (slice info) and deducted from whichever spool the AMS is feeding as the print progresses. Assign spools to AMS slots on the Dashboard.",
+"Güncellendi:": "Updated:",
+"Hangisi?": "Which one?",
+"Harici makara": "External spool",
+"Harici makara (boş)": "External spool (empty)",
+"Hazır": "Ready",
+"Hazır bekleyen sipariş yok.": "No ready orders waiting.",
+"Hazır bekleyen sipariş yok.{0}": "No ready orders waiting.{0}",
+"Henüz baskı bağlanmadı": "No prints linked yet",
+"Henüz filament alımı yok.": "No filament purchases yet.",
+"Henüz kayıt yok. Pano'dan “✓ Baskı kaydet” ile ekle (Anycubic bağlıysa otomatik eklenir).": "No records yet. Add one from the Dashboard with “✓ Log print” (added automatically when a printer is connected).",
+"Henüz makara yok.": "No spools yet.",
+"Hepsi ({0} tabla)": "All ({0} plates)",
+"Her slota bir makara ata; baskı sırasında takılı slottaki makaradan gram otomatik düşülür.": "Assign a spool to each slot; during a print, grams are deducted from the loaded slot automatically.",
+"Hesapla bağlan; uygulama/bulut çalışmaya devam eder": "Sign in with your account; the app/cloud keep working",
+"Hesapta yazıcı bulunamadı": "No printer found on the account",
+"Hoş geldin 👋": "Welcome 👋",
+"IP adresi": "IP address",
+"IP adresi gir": "Enter an IP address",
+"IP adresini yazıcı ekranında": "You can find the IP address on the printer screen under",
+"IP, seri no ve erişim kodunu gir": "Enter IP, serial number and access code",
+"Kalan (g)": "Remaining (g)",
+"Kaldır": "Remove",
+"Kargo takip no": "Tracking number",
+"Kargo ücreti (₺)": "Shipping (₺)",
+"Kargoda": "Shipped",
+"Katalogdan ürün": "Product from catalogue",
+"Kaydedildi": "Saved",
+"Kaydedildi, makaradan düşüldü": "Saved, deducted from the spool",
+"Kaydet": "Save",
+"Kaydet ve düş": "Save and deduct",
+"Kayıt silinsin mi?": "Delete this record?",
+"Kobra S1'e doğrudan bağlan, internet gerekmez": "Connect directly to a Kobra S1, no internet needed",
+"Kobra S{0} baskı sırasında ortalama ~{1} W çeker (tabla ısınırken daha fazla). Sipariş maliyeti = filament (makaranın ₺/g fiyatı) + elektrik (baskı süresi × W × kWh) + işçilik (senin harcadığın süre × ₺/saat) + ek masraflar.": "A Kobra S{0} draws ~{1} W on average while printing (more while the bed heats). Order cost = filament (spool ₺/g) + electricity (print time × W × kWh) + labour (your time × ₺/hour) + extras.",
+"Kobra S{0}'e doğrudan bağlan, internet gerekmez": "Connect directly to a Kobra S{0}, no internet needed",
+"Kâr": "Profit",
+"LAN: {0}": "LAN: {0}",
+"LAN: {0} yazıcısına bağlanıldı ({1})": "LAN: connected to {0} ({1})",
+"MQTT bağlantısı kurulamadı": "Couldn't open the MQTT connection",
+"MQTT bağlantısı reddedildi": "MQTT connection refused",
+"Makara": "Spool",
+"Makara silinsin mi?": "Delete this spool?",
+"Makaralar": "Spools",
+"Makarayı düzenle": "Edit spool",
+"Maliyet": "Cost",
+"Maliyet ayarları": "Cost settings",
+"Malzeme": "Material",
+"Marka": "Brand",
+"Müşteri": "Customer",
+"Müşteri yok": "No customer",
+"Ne bastın? (isteğe bağlı)": "What did you print? (optional)",
+"Net ağırlık (g)": "Net weight (g)",
+"Net filament": "Net filament",
+"Not": "Note",
+"Not: Anycubic kalan filament miktarını bildirmiyor; uygulama makaranın başlangıç ağırlığından, baskıda tüketilen filament uzunluğunu (yoğunluk × {0} mm kesit) çıkararak hesaplar. Ara sıra makarayı tartıp düzeltmek en doğrusu.": "Note: Anycubic doesn't report remaining filament; the app subtracts the filament length used in each print (density × {0} mm cross-section) from the spool's starting weight. Weighing the spool now and then is the most accurate.",
+"Olay günlüğü": "Event log",
+"PETG (renk farketmez) — {0} ₺/kg": "PETG (any colour) — {0} ₺/kg",
+"PLA (renk farketmez) — {0} ₺/kg": "PLA (any colour) — {0} ₺/kg",
+"Pano": "Dashboard",
+"Para birimi": "Currency",
+"Rafta": "On the shelf",
+"Rafta makara yok. “+ Makara ekle” ile ekle.": "No spools on the shelf. Add one with “+ Add spool”.",
+"Raftaki makaralar": "Spools on the shelf",
+"Rapor alınamadı": "No report received",
+"Rengi seçilmemiş": "No colour selected",
+"Renk": "Colour",
+"Renk adı": "Colour name",
+"Sadece sil": "Just delete",
+"Satıcı": "Seller",
+"Satış fiyatı (₺, adet)": "Sale price (₺, per piece)",
+"Satış fiyatı (₺, toplam)": "Sale price (₺, total)",
+"Senin işçiliğin (saat)": "Your labour (hours)",
+"Seri numarası": "Serial number",
+"Seri numarasını kontrol et (yazıcı ekranında Ayarlar → Cihaz)": "Check the serial number (printer screen: Settings → Device)",
+"Sil": "Delete",
+"Sil + gramları geri ekle": "Delete + restore grams",
+"Silindi": "Deleted",
+"Sipariş": "Order",
+"Sipariş (isteğe bağlı)": "Order (optional)",
+"Sipariş Basılıyor yapılınca düşülen tahmini gram": "Estimated grams deducted when the order was set to Printing",
+"Sipariş basılıyor: {0} · stoktan düşüldü: {1}": "Order printing: {0} · deducted from stock: {1}",
+"Sipariş kaydedildi": "Order saved",
+"Sipariş planından:": "From the order plan:",
+"Sipariş silinsin mi?": "Delete this order?",
+"Sipariş verildi": "Ordered",
+"Sipariş “Basılıyor” olunca tahmini gramı stoktan düş": "Deduct estimated grams from stock when an order is set to “Printing”",
+"Siparişi düzenle": "Edit order",
+"Siparişler": "Orders",
+"Siparişlere ayrılan": "Reserved for orders",
+"Siparişte bir renk seçince maliyet o rengin ₺/g fiyatıyla hesaplanır. Fiyatı olmayan makaralar için önce aynı renk, sonra aynı malzeme ortalaması, o da yoksa Ayarlar'daki varsayılan ₺/kg kullanılır.": "When an order uses a colour, its cost uses that colour's ₺/g price. For spools without a price, the same colour's average is used, then the material's average, then the default ₺/kg from Settings.",
+"Siparişte filament tahmini yok; stoktan bir şey düşülmedi.": "The order has no filament estimate; nothing was deducted.",
+"Siyah": "Black",
+"Slicer bu dosyayı dilimleyemedi": "The slicer couldn't slice this file",
+"Slicer'da dilimledikten sonra gösterilen gram değerini (ya da yazıcı ekranındaki tüketimi) yaz. Çok renkli baskıda her makara için ayrı satır ekle.": "Enter the grams shown after slicing (or the usage on the printer screen). For multi-colour prints add a row per spool.",
+"Slicer'da yakın zamanda dilimlenmiş dosya bulunamadı. Anycubic Slicer Next'te dilimle, sonra tekrar dene — ya da .3mf dosyasını doğrudan seç.": "No recently sliced file found. Slice it in Anycubic Slicer Next and try again — or choose the .3mf file directly.",
+"Slot {0} (yerine: {1} rafa)": "Slot {0} (replaces {1} → shelf)",
+"Slottan çıkar, rafa koy": "Unload, put on shelf",
+"Son 30 gün": "Last 30 days",
+"Son {0} gün": "Last {0} days",
+"Stok": "Stock",
+"Stok değeri": "Stock value",
+"Stokta karşılığı yok: {0} — listeden doğru rengi seç.": "No matching stock: {0} — pick the right colour from the list.",
+"Stoktan düşüldü: {0}": "Deducted from stock: {0}",
+"Stoğa ekle": "Add to stock",
+"Stoğa eklenmiş makaralar silinmez.": "Spools already added to stock aren't deleted.",
+"Süre": "Time",
+"Sıfırla": "Reset",
+"Tahmini baskı süresi (sa, adet başı)": "Estimated print time (h, per piece)",
+"Tahmini düşüm geri alındı: {0} g stoğa iade": "Estimated deduction undone: {0} g returned to stock",
+"Tahmini maliyet": "Estimated cost",
+"Tarayıcıda Anycubic oturumu bulunamadı. cloud-universe.anycubic.com'a giriş yapıp tekrar dene (Chrome/Brave/Edge/Arc).": "No Anycubic session found in your browser. Sign in at cloud-universe.anycubic.com and try again (Chrome/Brave/Edge/Arc).",
+"Tarayıcıdan otomatik bul": "Find automatically in browser",
+"Tarih": "Date",
+"Tart": "Weigh",
+"Tartıdaki ağırlık (g)": "Weight on the scale (g)",
+"Tercihler": "Preferences",
+"Teslim alındı": "Received",
+"Teslim alındı mı?": "Received?",
+"Teslim edildi": "Delivered",
+"Teslim tarihi": "Due date",
+"Test ediliyor…": "Testing…",
+"Test et": "Test",
+"Token yok": "No token",
+"Toplam": "Total",
+"Toplam harcama": "Total spent",
+"Toplam stok": "Total stock",
+"Toplam stok değeri": "Total stock value",
+"Tutarı “Bu ay ciro”ya geçer.": "The amount moves to “Revenue this month”.",
+"Tüm açık siparişler için bu renkten yeterli stok yok": "Not enough of this colour for all open orders",
+"Tümü": "All",
+"Varsayılan kâr marjı (%)": "Default profit margin (%)",
+"Vazgeç": "Cancel",
+"X1 / P1 / A1 / H2 — yerel ağdan, erişim koduyla": "X1 / P1 / A1 / H2 — local network, with access code",
+"XX-Token (eyJ… ile başlar)": "XX-Token (starts with eyJ…)",
+"X{0} / P{1} / A{2} / H{3} — yerel ağdan, erişim koduyla": "X{0} / P{1} / A{2} / H{3} — local network, with access code",
+"Yaklaşan siparişler": "Upcoming orders",
+"Yazıcı": "Printer",
+"Yazıcı bağlantısı": "Printer connection",
+"Yazıcı bağlantıyı reddetti (kod {0})": "The printer refused the connection (code {0})",
+"Yazıcı bulut modunda. Yazıcı ekranından LAN Modu'nu aç.": "The printer is in cloud mode. Turn on LAN Mode on the printer screen.",
+"Yazıcı cevabı çözülemedi": "Couldn't decrypt the printer's response",
+"Yazıcı isteği reddetti: {0}": "The printer rejected the request: {0}",
+"Yazıcı ortalama güç (W)": "Printer average power (W)",
+"Yazıcı:": "Printer:",
+"Yazıcıda '{0}' dosyası bulunamadı": "File '{0}' not found on the printer",
+"Yazıcıdan anlaşılmayan cevap": "Unexpected response from the printer",
+"Yazıcının IP adresi (ör. 192.168.1.42)": "Printer IP address (e.g. 192.168.1.42)",
+"Yazıcının IP adresi (ör. {0})": "Printer IP address (e.g. {0})",
+"Yazıcıya ulaşılamadı ({0})": "Couldn't reach the printer ({0})",
+"Yazıcıya yerel ağdan bağlanılamıyor": "Can't reach the printer on the local network",
+"Yazıcıyı bağla (isteğe bağlı)": "Connect a printer (optional)",
+"Yeni filament alımı": "New filament purchase",
+"Yeni firmware'lerde": "On newer firmware you may need to turn on",
+"Yeni kalan": "New remaining",
+"Yeni makara": "New spool",
+"Yeni sipariş": "New order",
+"Yeni ürün": "New product",
+"adet": "pcs",
+"adresine git ve Anycubic hesabınla giriş yap.": "and sign in with your Anycubic account.",
+"alım yok": "no purchases",
+"ayarlanmadı": "not set up",
+"ayrıldı. Makaralardaki gramlar değişmez; bu sadece plan.": "reserved. Spool grams don't change; this is only a plan.",
+"az kalacak": "will run low",
+"açık siparişler için ayrılan filament": "filament reserved for open orders",
+"açık siparişlerden sonra ne kalacak": "what's left after open orders",
+"basıyor": "printing",
+"bağlanamadı": "connection failed",
+"bağlanıyor…": "connecting…",
+"bağlı": "connected",
+"bağlı değil": "not connected",
+"bilinmeyen istek": "unknown request",
+"boş": "empty",
+"boşta": "idle",
+"bu renk": "this colour",
+"bölümünde ya da modeminin bağlı cihazlar listesinde bulabilirsin.": "or in your router's list of connected devices.",
+"de farklı olabilir.": "may differ.",
+"dilimlendi": "sliced",
+"dk önce": "min ago",
+"eklendi": "added",
+"eksik": "missing",
+"elle mod": "manual mode",
+"erişim kodu": "access code",
+"filament girilmemiş": "no filament entered",
+"fiyat yok": "no price",
+"g uygulandı": "g applied",
+"gram": "grams",
+"güncellendi": "updated",
+"güncellendi {0} sn önce": "updated {0} s ago",
+"ham veri": "raw data",
+"hazır, teslim edilmemiş siparişler": "ready, not yet delivered orders",
+"henüz sipariş yok": "no orders yet",
+"ile elindeki makaraları gir (marka, renk, kaç gram).": "— enter the spools you have (brand, colour, grams).",
+"içinde {1} tabla var. Hangisi?": "has {1} plates. Which one?",
+"kalıcı olarak silinecek.": "will be deleted permanently.",
+"kapalı": "off",
+"kutu, kargo, boya": "box, shipping, paint",
+"makara": "spool",
+"makara stoğa eklendi": "spools added to stock",
+"makara yok": "no spools",
+"ortalaması": "average",
+"rafta": "on shelf",
+"rafta makara yok": "no spools on the shelf",
+"renk seçilmemiş": "no colour selected",
+"sa": "h",
+"slotları": "slots",
+"sn önce": "s ago",
+"tahmini": "estimated",
+"takip: {0}": "tracking: {0}",
+"takılı": "loaded",
+"tümü →": "all →",
+"varsayılan": "default",
+"ve": "and",
+"ya da dosyayı bu pencereye sürükle": "or drag the file onto this window",
+"ya da elle yapıştır:": "or paste manually:",
+"ya da miktar yaz (eksi = düş)": "or type an amount (minus = deduct)",
+"yaz, Enter'a bas, buraya yapıştır. Token yaklaşık 90 gün geçerlidir. Sadece bu bilgisayarda saklanır.": ", press Enter and paste it here. The token is valid for about 90 days and is stored only on this computer.",
+"yaz, Enter'a bas, buraya yapıştır. Token yaklaşık {0} gün geçerlidir. Sadece bu bilgisayarda saklanır.": ", press Enter and paste it here. The token is valid for about {0} days and is stored only on this computer.",
+"yeterli": "enough",
+"yüklendi": "loaded",
+"zımpara, boya…": "sanding, paint…",
+"{0} (renk farketmez) — {1}": "{0} (any colour) — {1}",
+"{0} (stokta yok)": "{0} (out of stock)",
+"{0} adet · {1} g": "{0} pcs · {1} g",
+"{0} az kalacak": "{0} will run low",
+"{0} açık sipariş için": "for {0} open orders",
+"{0} baskı · {1} g · {2} sa": "{0} prints · {1} g · {2} h",
+"{0} dk kaldı": "{0} min left",
+"{0} dk önce": "{0} min ago",
+"{0} eksik": "{0} short",
+"{0} eksik · sipariş ver": "{0} short · order more",
+"{0} fiyatsız": "{0} without price",
+"{0} g stok": "{0} g in stock",
+"{0} g stok yetmedi": "{0} g short in stock",
+"{0} g stoğa geri eklendi": "{0} g returned to stock",
+"{0} kalıcı olarak silinecek.": "{0} will be deleted permanently.",
+"{0} makara stoğa eklendi": "{0} spools added to stock",
+"{0} makara · toplam": "{0} spools · total",
+"{0} makara, fiyatı ve kargo payıyla birlikte rafa eklenecek.": "{0} spools will be added to the shelf with their price and share of shipping.",
+"{0} mm, {1}% infill": "{0} mm, {1}% infill",
+"{0} sa": "{0} h",
+"{0} sipariş": "{0} orders",
+"{0} sipariş · stok {1} g − ayrılan {2} g": "{0} orders · stock {1} g − reserved {2} g",
+"{0} sipariş · {1} adet satıldı · kâr {2} ₺": "{0} orders · {1} pcs sold · profit {2} ₺",
+"{0} sn önce": "{0} s ago",
+"{0} tahmini stoktan düşüldü": "{0} estimated deducted from stock",
+"{0} {1} eksik": "{0} {1} short",
+"{0} ₺/adet": "{0} ₺/pc",
+"{0}/adet": "{0}/pc",
+"{0}: {1} sipariş teslim edildi olarak işaretlensin mi?": "Mark {1} orders of {0} as delivered?",
+"{0}{1} g uygulandı": "{0}{1} g applied",
+"{2} sipariş · {3}": "{2} orders · {3}",
+"· %{0} kârla önerilen": "· suggested with {0}% margin",
+"· %{2} kârla önerilen": "· suggested with {2}% margin",
+"· elektrik": "· electricity",
+"· işçilik": "· labour",
+"· kâr": "· profit",
+"· tahmini toplam {0} g": "· estimated total {0} g",
+"· yerel ağ": "· local network",
+"· {0} adet satıldı · kâr {1}": "· {0} pcs sold · profit {1}",
+"· {0} sipariş": "· {0} orders",
+"· önerilen": "· suggested",
+"Önce alıma ürün satırı ekle": "Add an item row to the purchase first",
+"Önce bir makara ekle": "Add a spool first",
+"Öneriyi kullan": "Use suggestion",
+"Üretimdekiler bitince +{0}": "+{0} when the ones in production are done",
+"Üretimdekiler bitince +{0} ₺": "+{0} ₺ when the ones in production are done",
+"Üretimdekiler bitince {0} gelecek.": "{0} more when the ones in production are done.",
+"Ürün / açıklama": "Product / description",
+"Ürün adı": "Product name",
+"Ürün katalogdan silinsin mi?": "Remove this product from the catalogue?",
+"Ürün kaydedildi": "Product saved",
+"Ürünler": "Products",
+"Ürünü düzenle": "Edit product",
+"ör. -{0} ya da {1}": "e.g. -{0} or {1}",
+"ör. 0.2 mm, %15 doluluk": "e.g. 0.2 mm, 15% infill",
+"ör. 01P00A123456789": "e.g. 01P00A123456789",
+"ör. 192.168.1.50": "e.g. 192.168.1.50",
+"ör. 600": "e.g. 600",
+"ör. Ahmet Y.": "e.g. Alex M.",
+"ör. Anycubic mağaza, Trendyol": "e.g. Anycubic store, Amazon",
+"ör. Telefon standı": "e.g. Phone stand",
+"ör. benchy": "e.g. benchy",
+"ör. {0}": "e.g. {0}",
+"ör. {0} mm, %{1} doluluk": "e.g. {0} mm, {1}% infill",
+"İletişim (tel / IG)": "Contact (phone / IG)",
+"İptal": "Cancelled",
+"İstersen aşağıdaki ACE slotlarına hangi makaranın takılı olduğunu seç.": "Optionally pick which spool sits in each ACE slot below.",
+"İşçilik": "Labour",
+"İşçilik (sa)": "Labour (h)",
+"İşçilik (₺/saat, elle çalışma)": "Labour (₺/hour, hands-on work)",
+"Şu an basılıyor": "Printing now",
+"Şu an kayıtlı: {0} g": "Currently recorded: {0} g",
+"— baskı bitince geçmişten elle düzelt.": "— fix it manually in History after the print.",
+"— elle gir —": "— enter manually —",
+"— raftan makara tak —": "— load a spool from the shelf —",
+"— sipariş yok —": "— no order —",
+"— takılı": "— loaded",
+"— token süresi dolmuş olabilir, Ayarlar'dan yenile.": "— the token may have expired; renew it in Settings.",
+"— yazıcı açık mı, IP / seri no / erişim kodu doğru mu, LAN Only + Developer Mode açık mı? 20 sn'de bir tekrar deneniyor.": "— is the printer on, are IP / serial / access code right, are LAN Only + Developer Mode on? Retrying every 20 s.",
+"— yazıcı açık mı, LAN Modu açık mı, IP doğru mu? 20 sn'de bir tekrar deneniyor.": "— is the printer on, is LAN Mode on, is the IP right? Retrying every 20 s.",
+"•••••••• (kayıtlı)": "•••••••• (saved)",
+"₺/adet": "₺/pc",
+"☁️ Anycubic Cloud": "☁️ Anycubic Cloud",
+"☁️ Anycubic Cloud bağlantısı": "☁️ Anycubic Cloud connection",
+"⚠️ Bunun için yazıcı ekranında": "⚠️ For this, turn on",
+"⚠️ Gram bilgisi okunamadı:": "⚠️ Couldn't read grams:",
+"⚠️ gecikti ·": "⚠️ overdue ·",
+"⚠️ {0} eksik": "⚠️ {0} short",
+"⚠️ {0} g kullanılabilir{1}": "⚠️ {0} g available{1}",
+"⚠️ {0} hazır siparişte fiyat girilmemiş": "⚠️ {0} ready orders have no price",
+"✍️ Elle": "✍️ Manual",
+"✓ Baskı ekle": "✓ Add print",
+"✓ Baskı kaydet": "✓ Log print",
+"✓ Baskı kaydet (gram düş)": "✓ Log print (deduct grams)",
+"✓ Bağlandı · durum: {0} · AMS yuvası: {1} — “Bağlan”a basabilirsin.": "✓ Connected · state: {0} · AMS slots: {1} — you can press “Connect”.",
+"✓ Bulundu: {0}{1} — “Bağlan”a basabilirsin.": "✓ Found: {0}{1} — you can press “Connect”.",
+"✓ Teslim edildi": "✓ Delivered",
+"⤓ Rafa": "⤓ Shelf",
+"⭐ Kataloğa kaydet": "⭐ Save to catalogue",
+"⭐ “{0}” kataloğa {1}{2}.": "⭐ “{0}” {1} to the catalogue{2}.",
+"🎛️ Yuvaya tak…": "🎛️ Load into slot…",
+"💰 Beklenen para": "💰 Expected money",
+"💰 Renk / malzeme fiyatları": "💰 Colour / material prices",
+"📄 G-code / 3mf seç": "📄 Choose G-code / 3mf",
+"📄 G-code / {0}mf seç": "📄 Choose G-code / {0}mf",
+"📌 tahmini": "📌 estimated",
+"📌 {0} tahmini stoktan düşüldü": "📌 {0} estimated deducted from stock",
+"📡 Yerel ağ (IP)": "📡 Local network (IP)",
+"📡 Yerel ağ (IP) bağlantısı": "📡 Local network (IP) connection",
+"📦 Rafta": "📦 On the shelf",
+"📦 Raftaki makaralar": "📦 Spools on the shelf",
+"📦 Teslim alındı → stoğa ekle": "📦 Received → add to stock",
+"🚚 Kargoya verildi": "🚚 Shipped",
+"🛒 Eksikleri alım listesine ekle": "🛒 Add shortages to the shopping list",
+"🛒 Sipariş verdim": "🛒 I ordered it",
+"🟩 Bambu Lab bağlantısı": "🟩 Bambu Lab connection",
+"🧩 Slicer'daki son dilimleme": "🧩 Latest slice in the slicer",
+"🧮 Sipariş planı": "🧮 Order plan"
+}/*/I18N_EN*/;
+const NUM_RX = /\d+(?:[.,]\d+)*/g;
+// "{0}" içeren anahtarlar kalıp olarak da eşleşir (isim, dosya adı gibi değişken parçalar için)
+const I18N_RX = Object.entries(I18N_EN).filter(([k]) => /\{\d+\}/.test(k)).map(([k, v]) => { const ids = [];
+  const src = '^' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\{(\d+)\\\}/g, (_, i) => { ids.push(+i); return '([\\s\\S]+?)'; }) + '$';
+  return [new RegExp(src), ids, v, k.replace(/\{\d+\}/g, '').length]; }).sort((a, b) => b[3] - a[3]);
+const TR_CACHE = new Map();
+function tr(str){
+  if (LANG !== 'en' || !str) return str;
+  const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(str), core = m[2];
+  if (!core || !/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(core)) return str;
+  let r = I18N_EN[core];
+  if (r == null) { const nums = []; const key = core.replace(NUM_RX, x => { nums.push(x); return '{' + (nums.length - 1) + '}'; });
+    const t = key !== core && I18N_EN[key]; if (t != null && t !== false) r = t.replace(/\{(\d+)\}/g, (_, i) => nums[i]); }
+  if (r == null && TR_CACHE.has(core)) r = TR_CACHE.get(core);
+  else if (r == null) { for (const [rx, ids, v] of I18N_RX) { const mm = rx.exec(core);
+      if (mm) { r = v.replace(/\{(\d+)\}/g, (_, i) => { const gi = ids.indexOf(+i); return gi < 0 ? '' : tr(mm[gi + 1]); }); break; } }
+    if (TR_CACHE.size > 5000) TR_CACHE.clear(); TR_CACHE.set(core, r); }
+  if (r == null && core.includes(' · ')) { const parts = core.split(' · '), tp = parts.map(tr); if (tp.some((x, i) => x !== parts[i])) r = tp.join(' · '); }
+  return r == null ? str : m[1] + r + m[3];
+}
+function curFix(v){ const c = CUR(); return c !== '₺' && v.includes('₺') ? v.replaceAll('₺', c) : v; }
+function trNode(n){
+  if (n.nodeType === 3) { const v = n.nodeValue, t = curFix(tr(v)); if (t !== v) n.nodeValue = t; return; }
+  if (n.nodeType !== 1 || /^(SCRIPT|STYLE|TEXTAREA)$/.test(n.nodeName)) return;
+  for (const a of ['placeholder', 'title']) if (n.hasAttribute?.(a)) { const v = n.getAttribute(a), t = curFix(tr(v)); if (t !== v) n.setAttribute(a, t); }
+  for (const c of n.childNodes) trNode(c);
+}
+new MutationObserver(ms => { for (const m of ms) {
+  if (m.type === 'childList') m.addedNodes.forEach(trNode); else trNode(m.target); } })
+  .observe(document.documentElement, {childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title']});
+document.addEventListener('DOMContentLoaded', () => { const lb = document.getElementById('langBtn'); if (lb) lb.textContent = LANG === 'en' ? '🇹🇷 TR' : '🇬🇧 EN'; trNode(document.body); document.title = tr(document.title); });
+// =========================================================
 let S = null, cur = 'pano';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const g = n => (Math.round(n * 10) / 10).toLocaleString('tr-TR') + ' g';
-const ago = t => { const s = (Date.now()/1000 - t) | 0; return s < 60 ? s + ' sn önce' : s < 3600 ? ((s/60)|0) + ' dk önce' : new Date(t*1000).toLocaleString('tr-TR'); };
-const dt = t => new Date(t*1000).toLocaleString('tr-TR', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const g = n => (Math.round(n * 10) / 10).toLocaleString(LOC) + ' g';
+const ago = t => { const s = (Date.now()/1000 - t) | 0; return s < 60 ? s + ' sn önce' : s < 3600 ? ((s/60)|0) + ' dk önce' : new Date(t*1000).toLocaleString(LOC); };
+const dt = t => new Date(t*1000).toLocaleString(LOC, {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'), m.length>40?5000:2600); }
 
 async function post(url, body){
@@ -325,7 +850,7 @@ function render(){
     ['Toplam stok', g(tot)], ['Makara', S.spools.length], ['Son 30 gün', g(d30)],
     ['Açık sipariş', (S.orders||[]).filter(o=>!['teslim','iptal'].includes(o.status)).length],
     ...(PLAN && PLAN.total ? [['Siparişlere ayrılan', g(PLAN.total)]] : []),
-    ...(val ? [['Stok değeri', val.toLocaleString('tr-TR',{maximumFractionDigits:0})+' ₺']] : [])
+    ...(val ? [['Stok değeri', val.toLocaleString(LOC,{maximumFractionDigits:0})+' '+CUR()]] : [])
   ].map(([a,b])=>`<div class="stat"><div class="mut small">${a}</div><div class="big">${b}</div></div>`).join('');
 
   // baskı
@@ -419,7 +944,7 @@ function renderHist(){
   const ls = S.lan_status || {};
   $('#lanState').textContent = !S.settings.lan_host ? 'ayarlanmadı' : ls.connected ? 'bağlı' : ls.error ? 'bağlanamadı' : 'bağlanıyor…';
   $('#lanState').className = 'tag ' + (ls.connected ? 'acc' : '');
-  for (const k of ['kwh_price','printer_watt','labor_hour','margin','default_kg']) { const i = $('#costf')[k]; if (document.activeElement !== i) i.value = S.settings[k] ?? ''; }
+  for (const k of ['kwh_price','printer_watt','labor_hour','margin','default_kg','currency']) { const i = $('#costf')[k]; if (document.activeElement !== i) i.value = S.settings[k] ?? ''; }
   $('#tokState').textContent = S.has_token ? (err ? 'hata' : 'bağlı') : 'bağlı değil';
   $('#tokState').className = 'tag ' + (S.has_token && !err ? 'acc' : '');
   if (document.activeElement !== $('#lowg')) $('#lowg').value = S.settings.low_g;
@@ -431,9 +956,9 @@ function renderHist(){
 // ===================== Para / maliyet =====================
 const ORDER_ST = {bekliyor:'Bekliyor', basiliyor:'Basılıyor', hazir:'Hazır', teslim:'Teslim edildi', iptal:'İptal'};
 const PUR_ST = {liste:'Alınacak', siparis:'Sipariş verildi', kargoda:'Kargoda', teslim:'Teslim alındı'};
-const money = n => (Math.round((n||0)*100)/100).toLocaleString('tr-TR', {minimumFractionDigits: (Math.abs(n)<100 && n%1)?2:0, maximumFractionDigits:2}) + ' ₺';
+const money = n => (Math.round((n||0)*100)/100).toLocaleString(LOC, {minimumFractionDigits: (Math.abs(n)<100 && n%1)?2:0, maximumFractionDigits:2}) + ' ' + CUR();
 const today = () => new Date().toISOString().slice(0,10);
-const fmtDate = d => d ? new Date(d+'T00:00').toLocaleDateString('tr-TR', {day:'numeric', month:'short'}) : '';
+const fmtDate = d => d ? new Date(d+'T00:00').toLocaleDateString(LOC, {day:'numeric', month:'short'}) : '';
 const matOf = s => String(s.material||'PLA').toUpperCase().trim();
 const grpKey = s => matOf(s) + '|' + String(s.name || s.color || '').trim().toLocaleLowerCase('tr-TR');
 const ownGP = s => s && +s.price && +s.total_g ? s.price / s.total_g : 0;
@@ -457,7 +982,7 @@ function groups(){
     .sort((a,b)=>a.material.localeCompare(b.material) || a.name.localeCompare(b.name,'tr'));
 }
 const kg = p => money(p*1000) + '/kg';
-const hrs = h => (Math.round(h*10)/10).toLocaleString('tr-TR') + ' sa';
+const hrs = h => (Math.round(h*10)/10).toLocaleString(LOC) + ' sa';
 function refInfo(ref){
   if (ref?.startsWith('g:')) { const x = groups().find(z=>z.key===ref.slice(2)); if (x) return {label:[x.material, x.name].filter(Boolean).join(' · '), color:x.color, rem:x.rem}; return {label: ref.slice(2).replace('|',' · '), color:null, rem:0}; }
   if (ref?.startsWith('m:')) { const m = ref.slice(2); return {label: m + ' (renk farketmez)', color:null, rem: S.spools.filter(s=>matOf(s)===m).reduce((a,s)=>a+Math.max(0,s.remaining_g||0),0)}; }
@@ -902,7 +1427,7 @@ async function bambuSave(){ const v = bbVals();
   $('#bbf').code.value = ''; toast('Bağlanılıyor…'); setTimeout(load, 4000); }
 async function lanSave(){ const host = $('#lanip').value.trim(); if (!host) return toast('IP adresi gir');
   await post('/api/settings', {mode:'lan', lan_host: host}); toast('Bağlanılıyor…'); setTimeout(load, 4000); }
-$('#costf').onchange = e => post('/api/settings', {[e.target.name]: +e.target.value});
+$('#costf').onchange = e => post('/api/settings', {[e.target.name]: e.target.name === 'currency' ? (e.target.value.trim() || '₺') : +e.target.value});
 $('#oq').oninput = renderOrders;
 
 $('#q').oninput = render;
